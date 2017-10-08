@@ -23,24 +23,19 @@ import com.github.lake54.groupsio.api.resource.UserResource;
  * subscriptions.get(0).getGroupId();
  * </pre>
  */
-public class GroupsIOApiClient
-{
+public class GroupsIOApiClient {
+
+    private static final String DEFAULT_HOSTNAME = "api.groups.io";
+    private static final String DEFAULT_VERSION = "v1";
+    private static final String DEFAULT_DOMAIN = "groups.io";
+
     private final String apiKey;
+    private final String apiRoot;
     private final String email;
     private final String domain;
     private final Integer twoFactor;
+
     private String apiToken;
-    private final String version;
-    private final String hostname;
-    
-    public static final String DEFAULT_HOSTNAME = "api.groups.io";
-    public static final String DEFAULT_SCHEME = "https";
-    public static final HttpHost DEFAULT_HOST = new HttpHost(DEFAULT_HOSTNAME, -1, DEFAULT_SCHEME);
-    public static final String DEFAULT_API_BASE = DEFAULT_HOST.toURI();
-    
-    public static final String DEFAULT_VERSION = "v1";
-    public static final String DEFAULT_VERSIONED_API_BASE = DEFAULT_API_BASE + "/" + DEFAULT_VERSION + "/";
-    public static final String DEFAULT_DOMAIN = "groups.io";
     
     /**
      * Common client initialisation. Provide your API key and email.
@@ -50,10 +45,7 @@ public class GroupsIOApiClient
      * @param email
      *            - the email of the user to log in as
      */
-    public GroupsIOApiClient(
-            final String apiKey,
-            final String email)
-    {
+    public GroupsIOApiClient(String apiKey, String email) {
         this(DEFAULT_HOSTNAME, DEFAULT_VERSION, apiKey, email, DEFAULT_DOMAIN, null);
     }
     
@@ -73,44 +65,26 @@ public class GroupsIOApiClient
      * @param twoFactor
      *            - the appropriate two-factor code to use
      */
-    public GroupsIOApiClient(
-            final String hostname,
-            final String version,
-            final String apiKey,
-            final String email,
-            final String domain,
-            final Integer twoFactor)
-    {
+    public GroupsIOApiClient(String hostname, String version, String apiKey, String email, String domain, Integer twoFactor) {
         Asserts.notBlank(apiKey, "apiKey");
         Asserts.notBlank(email, "email");
-        this.hostname = hostname;
-        this.version = version;
         this.apiKey = apiKey;
         this.email = email;
         this.domain = domain;
         this.twoFactor = twoFactor;
+        this.apiRoot = "https://" + hostname + "/" + version;
     }
-    
+
     /**
-     * Actions involving the currently authenticated user.
-     * 
-     * @return {@link UserResource}
+     * Actions involving message archives.
+     *
+     * @return {@link ArchiveResource}
      */
-    public UserResource user()
+    public ArchiveResource archive()
     {
-        return new UserResource(this, DEFAULT_VERSIONED_API_BASE);
+        return new ArchiveResource(this);
     }
-    
-    /**
-     * Actions involving the members of a group.
-     * 
-     * @return {@link MemberResource}
-     */
-    public MemberResource member()
-    {
-        return new MemberResource(this, DEFAULT_VERSIONED_API_BASE);
-    }
-    
+
     /**
      * Actions involving a specific group.
      * 
@@ -118,19 +92,27 @@ public class GroupsIOApiClient
      */
     public GroupResource group()
     {
-        return new GroupResource(this, DEFAULT_VERSIONED_API_BASE);
+        return new GroupResource(this);
     }
-    
+
     /**
-     * Actions involving message archives.
-     * 
-     * @return {@link ArchiveResource}
+     * Actions involving the members of a group.
+     *
+     * @return {@link MemberResource}
      */
-    public ArchiveResource archive()
-    {
-        return new ArchiveResource(this, DEFAULT_VERSIONED_API_BASE);
+    public MemberResource member() {
+        return new MemberResource(this);
     }
-    
+
+    /**
+     * Actions involving the currently authenticated user.
+     *
+     * @return {@link UserResource}
+     */
+    public UserResource user() {
+        return new UserResource(this);
+    }
+
     /**
      * @param apiToken
      *            set the apiToken
@@ -139,44 +121,46 @@ public class GroupsIOApiClient
     {
         this.apiToken = apiToken;
     }
-    
+
     /**
      * @return the apiKey
      */
-    public String getApiKey()
-    {
+    public String getApiKey() {
         return apiKey;
     }
-    
-    /**
-     * @return the email
-     */
-    public String getEmail()
-    {
-        return email;
-    }
-    
-    /**
-     * @return the domain
-     */
-    public String getDomain()
-    {
-        return domain;
-    }
-    
-    /**
-     * @return the twoFactor
-     */
-    public Integer getTwoFactor()
-    {
-        return twoFactor;
-    }
-    
+
     /**
      * @return the apiToken
      */
-    public String getApiToken()
-    {
+    public String getApiToken() {
         return apiToken;
+    }
+
+    /**
+     * @return the apiRoot
+     */
+    public String getApiRoot() {
+        return apiRoot;
+    }
+
+    /**
+     * @return the email
+     */
+    public String getEmail() {
+        return email;
+    }
+
+    /**
+     * @return the domain
+     */
+    public String getDomain() {
+        return domain;
+    }
+
+    /**
+     * @return the twoFactor
+     */
+    public Integer getTwoFactor() {
+        return twoFactor;
     }
 }

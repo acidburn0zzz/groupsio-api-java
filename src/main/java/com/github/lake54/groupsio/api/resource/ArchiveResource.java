@@ -1,25 +1,17 @@
 package com.github.lake54.groupsio.api.resource;
 
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.util.Arrays;
-import java.util.List;
-
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpRequestBase;
-import org.apache.http.client.utils.URIBuilder;
-
 import com.github.lake54.groupsio.api.GroupsIOApiClient;
-import com.github.lake54.groupsio.api.domain.Page;
 import com.github.lake54.groupsio.api.domain.Topic;
 import com.github.lake54.groupsio.api.exception.GroupsIOApiException;
 
-public class ArchiveResource extends BaseResource
-{
-    
-    public ArchiveResource(final GroupsIOApiClient apiClient, final String baseUrl)
-    {
-        super(apiClient, baseUrl);
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.util.List;
+
+public class ArchiveResource extends BaseResource {
+
+    public ArchiveResource(GroupsIOApiClient apiClient) {
+        super(apiClient);
     }
     
     /**
@@ -30,9 +22,7 @@ public class ArchiveResource extends BaseResource
      * @throws IOException
      * @throws GroupsIOApiException
      */
-    public List<Topic> getTopics(final Integer groupId) throws URISyntaxException, IOException, GroupsIOApiException
-    {
-        throw new UnsupportedOperationException("Not available in API");
+    public List<Topic> getTopics(final Integer groupId) throws URISyntaxException, IOException, GroupsIOApiException {
         /*- Commented out until implemented in the API.
         final URIBuilder uri = new URIBuilder().setPath(baseUrl + "gettopics");
         uri.setParameter("group_id", groupId.toString());
@@ -54,6 +44,6 @@ public class ArchiveResource extends BaseResource
         
         return topics;
         */
+        throw new UnsupportedOperationException("Not available in API");
     }
-    
 }

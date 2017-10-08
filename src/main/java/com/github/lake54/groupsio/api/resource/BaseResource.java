@@ -35,19 +35,16 @@ import java.nio.charset.StandardCharsets;
  * Only one method is public, {@link BaseResource#login(String)}, which can be
  * called by any child class (rather than creating a BaseResource instance).
  */
-public class BaseResource
-{
+public class BaseResource {
+
     protected final GroupsIOApiClient apiClient;
-    protected final String baseUrl;
     protected static final String MAX_RESULTS = "100";
     public static final ObjectMapper OM = new ObjectMapper().setPropertyNamingStrategy(
             PropertyNamingStrategy.SNAKE_CASE).configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
             .setSerializationInclusion(Include.NON_NULL);
     
-    public BaseResource(final GroupsIOApiClient client, final String baseUrl)
-    {
+    public BaseResource(GroupsIOApiClient client) {
         this.apiClient = client;
-        this.baseUrl = baseUrl;
     }
     
     /**
@@ -58,9 +55,8 @@ public class BaseResource
      * @throws GroupsIOApiException
      * @throws IOException
      */
-    public String login(final String password) throws URISyntaxException, GroupsIOApiException, IOException
-    {
-        final URIBuilder uri = new URIBuilder().setPath(GroupsIOApiClient.DEFAULT_VERSIONED_API_BASE + "login");
+    public String login(final String password) throws URISyntaxException, GroupsIOApiException, IOException {
+        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/login");
         uri.setParameter("email", apiClient.getEmail());
         uri.setParameter("password", password);
         final HttpGet request = new HttpGet();
@@ -87,8 +83,7 @@ public class BaseResource
      *             if the API returns an error, or an error is experienced
      *             during deserialisation
      */
-    protected <T> T callApi(final HttpUriRequest request, final Class<T> type) throws IOException, GroupsIOApiException
-    {
+    protected <T> T callApi(final HttpUriRequest request, final Class<T> type) throws IOException, GroupsIOApiException {
         return callApi(request, type, false);
     }
 
@@ -107,8 +102,7 @@ public class BaseResource
      *             if the API returns an error, or an error is experienced
      *             during deserialisation
      */
-    protected <T> T callApi(final HttpUriRequest request, final JavaType type) throws IOException, GroupsIOApiException
-    {
+    protected <T> T callApi(final HttpUriRequest request, final JavaType type) throws IOException, GroupsIOApiException {
         return callApi(request, type, false);
     }
     
@@ -130,8 +124,7 @@ public class BaseResource
      *             if the API returns an error, or an error is experienced
      *             during deserialisation
      */
-    protected <T> T callApi(final HttpUriRequest request, final Class<T> type, final Boolean login) throws IOException, GroupsIOApiException
-    {
+    protected <T> T callApi(final HttpUriRequest request, final Class<T> type, final Boolean login) throws IOException, GroupsIOApiException {
         return callApi(request, TypeUtils.generateType(typeFactory -> typeFactory.constructType(new TypeReference<T>(){ })), login);
     }
 
@@ -153,23 +146,18 @@ public class BaseResource
      *             if the API returns an error, or an error is experienced
      *             during deserialisation
      */
-    protected <T> T callApi(final HttpUriRequest request, final JavaType type, final Boolean login) throws IOException, GroupsIOApiException
-    {
-        try (final CloseableHttpClient client = getHttpClient(login, request))
-        {
+    protected <T> T callApi(final HttpUriRequest request, final JavaType type, final Boolean login) throws IOException, GroupsIOApiException {
+        try (final CloseableHttpClient client = getHttpClient(login, request)) {
             final HttpResponse response = client.execute(request);
             final InputStream stream = response.getEntity().getContent();
             final byte[] bytes = IOUtils.toByteArray(stream);
-            if (response.getStatusLine().getStatusCode() != 200)
-            {
+            if (response.getStatusLine().getStatusCode() != 200) {
                 throw new GroupsIOApiException(mapToError(bytes));
             }
-            try
-            {
+            try {
                 return OM.readValue(bytes, type);
             }
-            catch (final JsonMappingException e)
-            {
+            catch (final JsonMappingException e) {
                 throw new GroupsIOApiException(mapToError(bytes));
             }
         }
@@ -185,8 +173,7 @@ public class BaseResource
      * @throws JsonMappingException
      * @throws IOException
      */
-    private Error mapToError(final byte[] bytes) throws JsonParseException, JsonMappingException, IOException
-    {
+    private Error mapToError(final byte[] bytes) throws IOException {
         return OM.readValue(bytes, Error.class);
     }
     
@@ -196,17 +183,13 @@ public class BaseResource
      * @param login
      * @return
      */
-    private CloseableHttpClient getHttpClient(final Boolean login, final HttpUriRequest request)
-    {
+    private CloseableHttpClient getHttpClient(final Boolean login, final HttpUriRequest request) {
         final HttpClientBuilder builder = HttpClientBuilder.create();
         String key;
         // if (apiClient.getApiToken() == null || apiClient.getApiToken())
-        if (login)
-        {
+        if (login) {
             key = apiClient.getApiKey();
-        }
-        else
-        {
+        } else {
             key = apiClient.getApiToken();
         }
         key += ":";

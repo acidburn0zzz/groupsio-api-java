@@ -24,15 +24,13 @@ import java.util.Map.Entry;
 
 import static com.github.lake54.groupsio.api.domain.Error.Type.INADEQUATE_PERMISSIONS;
 
-public class GroupResource extends BaseResource
-{
-    private static final JavaType GROUP_PAGE_TYPE = TypeUtils.generateType(factory -> {
-        return factory.constructParametricType(Page.class, Group.class);
-    });
+public class GroupResource extends BaseResource {
 
-    public GroupResource(final GroupsIOApiClient apiClient, final String baseUrl)
-    {
-        super(apiClient, baseUrl);
+    private static final JavaType GROUP_PAGE_TYPE = TypeUtils
+        .generateType(factory -> factory.constructParametricType(Page.class, Group.class));
+
+    public GroupResource(GroupsIOApiClient apiClient) {
+        super(apiClient);
     }
     
     /**
@@ -43,9 +41,8 @@ public class GroupResource extends BaseResource
      * @throws IOException
      * @throws GroupsIOApiException
      */
-    public Permissions getPermissions(final Integer groupId) throws URISyntaxException, IOException, GroupsIOApiException
-    {
-        final URIBuilder uri = new URIBuilder().setPath(baseUrl + "getperms");
+    public Permissions getPermissions(final Integer groupId) throws URISyntaxException, IOException, GroupsIOApiException {
+        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/getperms");
         uri.setParameter("group_id", groupId.toString());
         final HttpRequestBase request = new HttpGet();
         request.setURI(uri.build());
@@ -61,22 +58,18 @@ public class GroupResource extends BaseResource
      * @throws IOException
      * @throws GroupsIOApiException
      */
-    public Group getGroup(final Integer groupId) throws URISyntaxException, IOException, GroupsIOApiException
-    {
-        if (apiClient.group().getPermissions(groupId).manageGroupSettings())
-        {
-            final URIBuilder uri = new URIBuilder().setPath(baseUrl + "getgroup");
-            uri.setParameter("group_id", groupId.toString());
-            final HttpRequestBase request = new HttpGet();
-            request.setURI(uri.build());
-            
-            return callApi(request, Group.class);
-        }
-        else
-        {
+    public Group getGroup(final Integer groupId) throws URISyntaxException, IOException, GroupsIOApiException {
+        if (!apiClient.group().getPermissions(groupId).manageGroupSettings()) {
             final Error error = Error.create(INADEQUATE_PERMISSIONS);
             throw new GroupsIOApiException(error);
         }
+
+        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/getgroup");
+        uri.setParameter("group_id", groupId.toString());
+        final HttpRequestBase request = new HttpGet();
+        request.setURI(uri.build());
+
+        return callApi(request, Group.class);
     }
     
     /**
@@ -89,9 +82,8 @@ public class GroupResource extends BaseResource
      * @throws IOException
      * @throws GroupsIOApiException
      */
-    public List<Group> getSubgroups(final Integer groupId) throws URISyntaxException, IOException, GroupsIOApiException
-    {
-        final URIBuilder uri = new URIBuilder().setPath(baseUrl + "getsubgroups");
+    public List<Group> getSubgroups(final Integer groupId) throws URISyntaxException, IOException, GroupsIOApiException {
+        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/getsubgroups");
         uri.setParameter("group_id", groupId.toString());
         uri.setParameter("limit", MAX_RESULTS);
         final HttpRequestBase request = new HttpGet();
@@ -101,8 +93,7 @@ public class GroupResource extends BaseResource
         final List<Group> subgroups = new ArrayList<>();
         subgroups.addAll(page.data());
         
-        while (page.hasMore())
-        {
+        while (page.hasMore()) {
             uri.setParameter("page_token", "" + page.nextPageToken());
             request.setURI(uri.build());
             page = callApi(request, GROUP_PAGE_TYPE);
@@ -112,8 +103,7 @@ public class GroupResource extends BaseResource
         return subgroups;
     }
     
-    public void createSubGroup(final Integer groupId, final String name, final String description, final String privacy)
-    {
+    public void createSubGroup(final Integer groupId, final String name, final String description, final String privacy) {
         throw new UnsupportedOperationException("Not implemented in API");
     }
     
@@ -135,34 +125,27 @@ public class GroupResource extends BaseResource
      * @throws IOException
      * @throws GroupsIOApiException
      */
-    public Group updateGroup(final Group group) throws URISyntaxException, IOException, GroupsIOApiException
-    {
-        if (apiClient.group().getPermissions(group.id()).manageGroupSettings())
-        {
-            final URIBuilder uri = new URIBuilder().setPath(baseUrl + "updategroup");
-            final HttpPost request = new HttpPost();
-            final Map<String, Object> map = OM.convertValue(group, Map.class);
-            final List<BasicNameValuePair> postParameters = new ArrayList<>();
-            for (final Entry<String, Object> entry : map.entrySet())
-            {
-                postParameters.add(new BasicNameValuePair(entry.getKey(), entry.getValue().toString()));
-            }
-            request.setEntity(new UrlEncodedFormEntity(postParameters));
-            
-            request.setURI(uri.build());
-            
-            return callApi(request, Group.class);
-        }
-        else
-        {
+    public Group updateGroup(final Group group) throws URISyntaxException, IOException, GroupsIOApiException {
+        if (!apiClient.group().getPermissions(group.id()).manageGroupSettings()) {
             final Error error = Error.create(INADEQUATE_PERMISSIONS);
             throw new GroupsIOApiException(error);
         }
+
+        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/updategroup");
+        final HttpPost request = new HttpPost();
+        final Map<String, Object> map = OM.convertValue(group, Map.class);
+        final List<BasicNameValuePair> postParameters = new ArrayList<>();
+        for (final Entry<String, Object> entry : map.entrySet()) {
+            postParameters.add(new BasicNameValuePair(entry.getKey(), entry.getValue().toString()));
+        }
+        request.setEntity(new UrlEncodedFormEntity(postParameters));
+
+        request.setURI(uri.build());
+
+        return callApi(request, Group.class);
     }
     
-    public void deleteGroup(final Integer groupId)
-    {
+    public void deleteGroup(final Integer groupId) {
         throw new UnsupportedOperationException("Not implemented in API");
     }
-    
 }

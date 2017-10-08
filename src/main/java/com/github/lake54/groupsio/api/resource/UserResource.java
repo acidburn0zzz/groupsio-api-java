@@ -22,15 +22,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-public class UserResource extends BaseResource
-{
-    private static final JavaType SUBSCRIPTION_PAGE_TYPE = TypeUtils.generateType(factory -> {
-        return factory.constructParametricType(Page.class, Subscription.class);
-    });
+public class UserResource extends BaseResource {
 
-    public UserResource(final GroupsIOApiClient apiClient, final String baseUrl)
-    {
-        super(apiClient, baseUrl);
+    private static final JavaType SUBSCRIPTION_PAGE_TYPE = TypeUtils
+        .generateType(factory -> factory.constructParametricType(Page.class, Subscription.class));
+
+    public UserResource(GroupsIOApiClient apiClient) {
+        super(apiClient);
     }
     
     /**
@@ -41,9 +39,8 @@ public class UserResource extends BaseResource
      * @throws IOException
      * @throws GroupsIOApiException
      */
-    public User getUser() throws URISyntaxException, IOException, GroupsIOApiException
-    {
-        final URIBuilder uri = new URIBuilder().setPath(baseUrl + "getuser");
+    public User getUser() throws URISyntaxException, IOException, GroupsIOApiException {
+        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/getuser");
         final HttpRequestBase request = new HttpGet();
         request.setURI(uri.build());
         
@@ -58,9 +55,8 @@ public class UserResource extends BaseResource
      * @throws IOException
      * @throws GroupsIOApiException
      */
-    public Subscription getSubscription(final Integer groupId) throws URISyntaxException, IOException, GroupsIOApiException
-    {
-        final URIBuilder uri = new URIBuilder().setPath(baseUrl + "getsub");
+    public Subscription getSubscription(final Integer groupId) throws URISyntaxException, IOException, GroupsIOApiException {
+        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/getsub");
         uri.setParameter("group_id", groupId.toString());
         final HttpGet request = new HttpGet();
         request.setURI(uri.build());
@@ -77,9 +73,8 @@ public class UserResource extends BaseResource
      * @throws IOException
      * @throws GroupsIOApiException
      */
-    public List<Subscription> getSubscriptions() throws URISyntaxException, IOException, GroupsIOApiException
-    {
-        final URIBuilder uri = new URIBuilder().setPath(baseUrl + "getsubs");
+    public List<Subscription> getSubscriptions() throws URISyntaxException, IOException, GroupsIOApiException {
+        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/getsubs");
         uri.setParameter("limit", MAX_RESULTS);
         final HttpGet request = new HttpGet();
         request.setURI(uri.build());
@@ -88,8 +83,7 @@ public class UserResource extends BaseResource
         final List<Subscription> subscriptions = new ArrayList<>();
         subscriptions.addAll(page.data());
         
-        while (page.hasMore())
-        {
+        while (page.hasMore()) {
             uri.setParameter("page_token", "" + page.nextPageToken());
             request.setURI(uri.build());
             page = callApi(request, SUBSCRIPTION_PAGE_TYPE);
@@ -117,14 +111,12 @@ public class UserResource extends BaseResource
      * @throws IOException
      * @throws GroupsIOApiException
      */
-    public User updateUser(final User user) throws URISyntaxException, IOException, GroupsIOApiException
-    {
-        final URIBuilder uri = new URIBuilder().setPath(baseUrl + "updateuser");
+    public User updateUser(final User user) throws URISyntaxException, IOException, GroupsIOApiException {
+        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/updateuser");
         final HttpPost request = new HttpPost();
         final Map<String, Object> map = OM.convertValue(user, Map.class);
         final List<BasicNameValuePair> postParameters = new ArrayList<>();
-        for (final Entry<String, Object> entry : map.entrySet())
-        {
+        for (final Entry<String, Object> entry : map.entrySet()) {
             postParameters.add(new BasicNameValuePair(entry.getKey(), entry.getValue().toString()));
         }
         request.setEntity(new UrlEncodedFormEntity(postParameters));
@@ -134,13 +126,11 @@ public class UserResource extends BaseResource
         return callApi(request, User.class);
     }
     
-    public Subscription updateSubscription(final Subscription subscription)
-    {
+    public Subscription updateSubscription(final Subscription subscription) {
         throw new UnsupportedOperationException("Not available in API");
     }
     
-    public void deleteSubscription(final Subscription subscription)
-    {
+    public void deleteSubscription(final Subscription subscription) {
         throw new UnsupportedOperationException("Not available in API");
     }
     
@@ -148,5 +138,4 @@ public class UserResource extends BaseResource
     {
         throw new UnsupportedOperationException("Not available in API");
     }
-    
 }

@@ -26,15 +26,13 @@ import java.util.Map.Entry;
 
 import static com.github.lake54.groupsio.api.domain.Error.Type.INADEQUATE_PERMISSIONS;
 
-public class MemberResource extends BaseResource
-{
-    private static final JavaType SUBSCRIPTION_PAGE_TYPE = TypeUtils.generateType(factory -> {
-        return factory.constructParametricType(Page.class, Subscription.class);
-    });
+public class MemberResource extends BaseResource {
 
-    public MemberResource(final GroupsIOApiClient apiClient, final String baseUrl)
-    {
-        super(apiClient, baseUrl);
+    private static final JavaType SUBSCRIPTION_PAGE_TYPE = TypeUtils
+        .generateType(factory -> factory.constructParametricType(Page.class, Subscription.class));
+
+    public MemberResource(GroupsIOApiClient apiClient) {
+        super(apiClient);
     }
     
     /**
@@ -46,23 +44,19 @@ public class MemberResource extends BaseResource
      * @throws GroupsIOApiException
      */
     public Subscription getMemberInGroup(final Integer groupId, final Integer memberId)
-            throws URISyntaxException, IOException, GroupsIOApiException
-    {
-        if (apiClient.group().getPermissions(groupId).viewMembers())
-        {
-            final URIBuilder uri = new URIBuilder().setPath(baseUrl + "getmember");
-            uri.setParameter("group_id", groupId.toString());
-            uri.setParameter("sub_id", memberId.toString());
-            final HttpRequestBase request = new HttpGet();
-            request.setURI(uri.build());
-            
-            return callApi(request, Subscription.class);
-        }
-        else
-        {
+            throws URISyntaxException, IOException, GroupsIOApiException {
+        if (!apiClient.group().getPermissions(groupId).viewMembers()) {
             final Error error = Error.create(INADEQUATE_PERMISSIONS);
             throw new GroupsIOApiException(error);
         }
+
+        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/getmember");
+        uri.setParameter("group_id", groupId.toString());
+        uri.setParameter("sub_id", memberId.toString());
+        final HttpRequestBase request = new HttpGet();
+        request.setURI(uri.build());
+
+        return callApi(request, Subscription.class);
     }
     
     /**
@@ -77,35 +71,31 @@ public class MemberResource extends BaseResource
      * @throws IOException
      * @throws GroupsIOApiException
      */
-    public List<Subscription> getMembersInGroup(final Integer groupId) throws URISyntaxException, IOException, GroupsIOApiException
-    {
-        if (apiClient.group().getPermissions(groupId).viewMembers())
-        {
-            final URIBuilder uri = new URIBuilder().setPath(baseUrl + "getmembers");
-            uri.setParameter("group_id", groupId.toString());
-            uri.setParameter("limit", MAX_RESULTS);
-            final HttpRequestBase request = new HttpGet();
-            request.setURI(uri.build());
-
-            Page<Subscription> page = callApi(request, SUBSCRIPTION_PAGE_TYPE);
-            final List<Subscription> subscriptions = new ArrayList<>();
-            subscriptions.addAll(page.data());
-            
-            while (page.hasMore())
-            {
-                uri.setParameter("page_token", "" + page.nextPageToken());
-                request.setURI(uri.build());
-                page = callApi(request, SUBSCRIPTION_PAGE_TYPE);
-                subscriptions.addAll(page.data());
-            }
-            
-            return subscriptions;
-        }
-        else
-        {
+    public List<Subscription> getMembersInGroup(final Integer groupId)
+            throws URISyntaxException, IOException, GroupsIOApiException {
+        if (!apiClient.group().getPermissions(groupId).viewMembers()) {
             final Error error = Error.create(INADEQUATE_PERMISSIONS);
             throw new GroupsIOApiException(error);
         }
+
+        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/getmembers");
+        uri.setParameter("group_id", groupId.toString());
+        uri.setParameter("limit", MAX_RESULTS);
+        final HttpRequestBase request = new HttpGet();
+        request.setURI(uri.build());
+
+        Page<Subscription> page = callApi(request, SUBSCRIPTION_PAGE_TYPE);
+        final List<Subscription> subscriptions = new ArrayList<>();
+        subscriptions.addAll(page.data());
+
+        while (page.hasMore()) {
+            uri.setParameter("page_token", "" + page.nextPageToken());
+            request.setURI(uri.build());
+            page = callApi(request, SUBSCRIPTION_PAGE_TYPE);
+            subscriptions.addAll(page.data());
+        }
+
+        return subscriptions;
     }
     
     /**
@@ -123,36 +113,31 @@ public class MemberResource extends BaseResource
      * @throws GroupsIOApiException
      */
     public List<Subscription> searchMembers(final Integer groupId, final String query)
-            throws URISyntaxException, IOException, GroupsIOApiException
-    {
-        if (apiClient.group().getPermissions(groupId).viewMembers())
-        {
-            final URIBuilder uri = new URIBuilder().setPath(baseUrl + "searchmembers");
-            uri.setParameter("group_id", groupId.toString());
-            uri.setParameter("q", query);
-            uri.setParameter("limit", MAX_RESULTS);
-            final HttpRequestBase request = new HttpGet();
-            request.setURI(uri.build());
-
-            Page<Subscription> page = callApi(request, SUBSCRIPTION_PAGE_TYPE);
-            final List<Subscription> subscriptions = new ArrayList<>();
-            subscriptions.addAll(page.data());
-            
-            while (page.hasMore())
-            {
-                uri.setParameter("page_token", "" + page.nextPageToken());
-                request.setURI(uri.build());
-                page = callApi(request, SUBSCRIPTION_PAGE_TYPE);
-                subscriptions.addAll(Arrays.asList(OM.convertValue(page.data(), Subscription[].class)));
-            }
-            
-            return subscriptions;
-        }
-        else
-        {
+            throws URISyntaxException, IOException, GroupsIOApiException {
+        if (!apiClient.group().getPermissions(groupId).viewMembers()) {
             final Error error = Error.create(INADEQUATE_PERMISSIONS);
             throw new GroupsIOApiException(error);
         }
+
+        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/searchmembers");
+        uri.setParameter("group_id", groupId.toString());
+        uri.setParameter("q", query);
+        uri.setParameter("limit", MAX_RESULTS);
+        final HttpRequestBase request = new HttpGet();
+        request.setURI(uri.build());
+
+        Page<Subscription> page = callApi(request, SUBSCRIPTION_PAGE_TYPE);
+        final List<Subscription> subscriptions = new ArrayList<>();
+        subscriptions.addAll(page.data());
+
+        while (page.hasMore()) {
+            uri.setParameter("page_token", "" + page.nextPageToken());
+            request.setURI(uri.build());
+            page = callApi(request, SUBSCRIPTION_PAGE_TYPE);
+            subscriptions.addAll(Arrays.asList(OM.convertValue(page.data(), Subscription[].class)));
+        }
+
+        return subscriptions;
     }
     
     /**
@@ -174,29 +159,26 @@ public class MemberResource extends BaseResource
      * @throws IOException
      * @throws GroupsIOApiException
      */
-    public Subscription updateMember(final Subscription subscription) throws URISyntaxException, IOException, GroupsIOApiException
-    {
-        if (apiClient.group().getPermissions(subscription.groupId()).manageMemberSubscriptionOptions())
-        {
-            final URIBuilder uri = new URIBuilder().setPath(baseUrl + "updatemember");
-            final HttpPost request = new HttpPost();
-            final Map<String, Object> map = OM.convertValue(subscription, Map.class);
-            final List<BasicNameValuePair> postParameters = new ArrayList<>();
-            for (final Entry<String, Object> entry : map.entrySet())
-            {
-                postParameters.add(new BasicNameValuePair(entry.getKey(), entry.getValue().toString()));
-            }
-            request.setEntity(new UrlEncodedFormEntity(postParameters));
-            
-            request.setURI(uri.build());
-            
-            return callApi(request, Subscription.class);
-        }
-        else
-        {
+    public Subscription updateMember(final Subscription subscription)
+            throws URISyntaxException, IOException, GroupsIOApiException {
+        if (!apiClient.group().getPermissions(subscription.groupId()).manageMemberSubscriptionOptions()) {
             final Error error = Error.create(INADEQUATE_PERMISSIONS);
             throw new GroupsIOApiException(error);
         }
+
+        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/updatemember");
+        final HttpPost request = new HttpPost();
+        final Map<String, Object> map = OM.convertValue(subscription, Map.class);
+        final List<BasicNameValuePair> postParameters = new ArrayList<>();
+        for (final Entry<String, Object> entry : map.entrySet())
+        {
+            postParameters.add(new BasicNameValuePair(entry.getKey(), entry.getValue().toString()));
+        }
+        request.setEntity(new UrlEncodedFormEntity(postParameters));
+
+        request.setURI(uri.build());
+
+        return callApi(request, Subscription.class);
     }
     
     /**
@@ -212,24 +194,21 @@ public class MemberResource extends BaseResource
      * @throws GroupsIOApiException
      */
     public Subscription banMember(final Integer groupId, final Integer subscriptionId)
-            throws URISyntaxException, IOException, GroupsIOApiException
-    {
-        if (apiClient.group().getPermissions(groupId).banMembers()
-                && getMemberInGroup(groupId, subscriptionId).status().canBan())
-        {
-            final URIBuilder uri = new URIBuilder().setPath(baseUrl + "banmember");
-            uri.setParameter("group_id", groupId.toString());
-            uri.setParameter("sub_id", subscriptionId.toString());
-            final HttpRequestBase request = new HttpGet();
-            request.setURI(uri.build());
-            
-            return callApi(request, Subscription.class);
-        }
-        else
-        {
+            throws URISyntaxException, IOException, GroupsIOApiException {
+
+        if (!apiClient.group().getPermissions(groupId).banMembers()
+                || !getMemberInGroup(groupId, subscriptionId).status().canBan()) {
             final Error error = Error.create(INADEQUATE_PERMISSIONS);
             throw new GroupsIOApiException(error);
         }
+
+        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/banmember");
+        uri.setParameter("group_id", groupId.toString());
+        uri.setParameter("sub_id", subscriptionId.toString());
+        final HttpRequestBase request = new HttpGet();
+        request.setURI(uri.build());
+
+        return callApi(request, Subscription.class);
     }
     
     /**
@@ -245,23 +224,19 @@ public class MemberResource extends BaseResource
      * @throws GroupsIOApiException
      */
     public Subscription approveMember(final Integer groupId, final Integer subscriptionId)
-            throws URISyntaxException, IOException, GroupsIOApiException
-    {
-        if (apiClient.group().getPermissions(groupId).managePendingMembers())
-        {
-            final URIBuilder uri = new URIBuilder().setPath(baseUrl + "approvemember");
-            uri.setParameter("group_id", groupId.toString());
-            uri.setParameter("sub_id", subscriptionId.toString());
-            final HttpRequestBase request = new HttpGet();
-            request.setURI(uri.build());
-            
-            return callApi(request, Subscription.class);
-        }
-        else
-        {
+            throws URISyntaxException, IOException, GroupsIOApiException {
+        if (!apiClient.group().getPermissions(groupId).managePendingMembers()) {
             final Error error = Error.create(INADEQUATE_PERMISSIONS);
             throw new GroupsIOApiException(error);
         }
+
+        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/approvemember");
+        uri.setParameter("group_id", groupId.toString());
+        uri.setParameter("sub_id", subscriptionId.toString());
+        final HttpRequestBase request = new HttpGet();
+        request.setURI(uri.build());
+
+        return callApi(request, Subscription.class);
     }
 
     /**
@@ -276,24 +251,19 @@ public class MemberResource extends BaseResource
      * @throws GroupsIOApiException
      */
     public void bulkRemoveMembers(final Integer groupId, List<String> emails)
-        throws URISyntaxException, IOException, GroupsIOApiException
-    {
-
-        if (apiClient.group().getPermissions(groupId).inviteMembers())
-        {
-            final URIBuilder uri = new URIBuilder().setPath(baseUrl + "bulkremovemembers");
-            uri.setParameter("group_id", groupId.toString());
-            uri.setParameter("emails", String.join("\n", emails));
-            final HttpRequestBase request = new HttpGet();
-            request.setURI(uri.build());
-
-            callApi(request, DirectAddResults.class);
-        }
-        else
-        {
+            throws URISyntaxException, IOException, GroupsIOApiException {
+        if (apiClient.group().getPermissions(groupId).inviteMembers()) {
             final Error error = Error.create(INADEQUATE_PERMISSIONS);
             throw new GroupsIOApiException(error);
         }
+
+        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/bulkremovemembers");
+        uri.setParameter("group_id", groupId.toString());
+        uri.setParameter("emails", String.join("\n", emails));
+        final HttpRequestBase request = new HttpGet();
+        request.setURI(uri.build());
+
+        callApi(request, DirectAddResults.class);
     }
 
     /**
@@ -308,24 +278,19 @@ public class MemberResource extends BaseResource
      * @throws GroupsIOApiException
      */
     public void directAddMember(final Integer groupId, List<String> emails)
-            throws URISyntaxException, IOException, GroupsIOApiException
-    {
-
-        if (apiClient.group().getPermissions(groupId).inviteMembers())
-        {
-            final URIBuilder uri = new URIBuilder().setPath(baseUrl + "directadd");
-            uri.setParameter("group_id", groupId.toString());
-            uri.setParameter("emails", String.join("\n", emails));
-            final HttpRequestBase request = new HttpGet();
-            request.setURI(uri.build());
-
-            callApi(request, DirectAddResults.class);
-        }
-        else
-        {
+            throws URISyntaxException, IOException, GroupsIOApiException {
+        if (!apiClient.group().getPermissions(groupId).inviteMembers()) {
             final Error error = Error.create(INADEQUATE_PERMISSIONS);
             throw new GroupsIOApiException(error);
         }
+
+        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/directadd");
+        uri.setParameter("group_id", groupId.toString());
+        uri.setParameter("emails", String.join("\n", emails));
+        final HttpRequestBase request = new HttpGet();
+        request.setURI(uri.build());
+
+        callApi(request, DirectAddResults.class);
     }
     
     public void inviteMember()
@@ -346,23 +311,19 @@ public class MemberResource extends BaseResource
      * @throws GroupsIOApiException
      */
     public Subscription removeMember(final Integer groupId, final Integer subscriptionId)
-            throws URISyntaxException, IOException, GroupsIOApiException
-    {
-        if (apiClient.group().getPermissions(groupId).removeMembers())
-        {
-            final URIBuilder uri = new URIBuilder().setPath(baseUrl + "removemember");
-            uri.setParameter("group_id", groupId.toString());
-            uri.setParameter("sub_id", subscriptionId.toString());
-            final HttpRequestBase request = new HttpGet();
-            request.setURI(uri.build());
-            
-            return callApi(request, Subscription.class);
-        }
-        else
-        {
+            throws URISyntaxException, IOException, GroupsIOApiException {
+        if (!apiClient.group().getPermissions(groupId).removeMembers()) {
             final Error error = Error.create(INADEQUATE_PERMISSIONS);
             throw new GroupsIOApiException(error);
         }
+
+        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/removemember");
+        uri.setParameter("group_id", groupId.toString());
+        uri.setParameter("sub_id", subscriptionId.toString());
+        final HttpRequestBase request = new HttpGet();
+        request.setURI(uri.build());
+
+        return callApi(request, Subscription.class);
     }
     
     /**
@@ -378,24 +339,20 @@ public class MemberResource extends BaseResource
      * @throws GroupsIOApiException
      */
     public Subscription sendBounceProbe(final Integer groupId, final Integer subscriptionId)
-            throws URISyntaxException, IOException, GroupsIOApiException
-    {
-        if (apiClient.group().getPermissions(groupId).manageMemberSubscriptionOptions()
-                && getMemberInGroup(groupId, subscriptionId).userStatus().canSendBounceProbe())
-        {
-            final URIBuilder uri = new URIBuilder().setPath(baseUrl + "sendbounceprobe");
-            uri.setParameter("group_id", groupId.toString());
-            uri.setParameter("sub_id", subscriptionId.toString());
-            final HttpRequestBase request = new HttpGet();
-            request.setURI(uri.build());
-            
-            return callApi(request, Subscription.class);
-        }
-        else
-        {
+            throws URISyntaxException, IOException, GroupsIOApiException {
+        if (!apiClient.group().getPermissions(groupId).manageMemberSubscriptionOptions()
+                || !getMemberInGroup(groupId, subscriptionId).userStatus().canSendBounceProbe()) {
             final Error error = Error.create(INADEQUATE_PERMISSIONS);
             throw new GroupsIOApiException(error);
         }
+
+        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/sendbounceprobe");
+        uri.setParameter("group_id", groupId.toString());
+        uri.setParameter("sub_id", subscriptionId.toString());
+        final HttpRequestBase request = new HttpGet();
+        request.setURI(uri.build());
+
+        return callApi(request, Subscription.class);
     }
     
     /**
@@ -411,23 +368,19 @@ public class MemberResource extends BaseResource
      * @throws GroupsIOApiException
      */
     public Subscription sendConfirmationEmail(final Integer groupId, final Integer subscriptionId)
-            throws URISyntaxException, IOException, GroupsIOApiException
-    {
-        if (apiClient.group().getPermissions(groupId).manageMemberSubscriptionOptions()
-                && getMemberInGroup(groupId, subscriptionId).userStatus().canSendConfirmationEmail())
-        {
-            final URIBuilder uri = new URIBuilder().setPath(baseUrl + "sendconfirmation");
-            uri.setParameter("group_id", groupId.toString());
-            uri.setParameter("sub_id", subscriptionId.toString());
-            final HttpRequestBase request = new HttpGet();
-            request.setURI(uri.build());
-            
-            return callApi(request, Subscription.class);
-        }
-        else
-        {
+            throws URISyntaxException, IOException, GroupsIOApiException {
+        if (!apiClient.group().getPermissions(groupId).manageMemberSubscriptionOptions()
+                || !getMemberInGroup(groupId, subscriptionId).userStatus().canSendConfirmationEmail()) {
             final Error error = Error.create(INADEQUATE_PERMISSIONS);
             throw new GroupsIOApiException(error);
         }
+
+        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/sendconfirmation");
+        uri.setParameter("group_id", groupId.toString());
+        uri.setParameter("sub_id", subscriptionId.toString());
+        final HttpRequestBase request = new HttpGet();
+        request.setURI(uri.build());
+
+        return callApi(request, Subscription.class);
     }
 }
