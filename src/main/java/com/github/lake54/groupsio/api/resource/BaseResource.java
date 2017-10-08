@@ -1,10 +1,18 @@
 package com.github.lake54.groupsio.api.resource;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
-
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategy;
+import com.github.lake54.groupsio.api.GroupsIOApiClient;
+import com.github.lake54.groupsio.api.domain.Error;
+import com.github.lake54.groupsio.api.domain.Login;
+import com.github.lake54.groupsio.api.exception.GroupsIOApiException;
+import com.github.lake54.groupsio.api.jackson.TypeUtils;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpResponse;
@@ -16,16 +24,10 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicHeader;
 
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
-import com.github.lake54.groupsio.api.GroupsIOApiClient;
-import com.github.lake54.groupsio.api.domain.Error;
-import com.github.lake54.groupsio.api.domain.Login;
-import com.github.lake54.groupsio.api.exception.GroupsIOApiException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Base class for Groups.io resources.
@@ -65,7 +67,7 @@ public class BaseResource
         request.setURI(uri.build());
         
         final Login login = callApi(request, Login.class, true);
-        final String apiToken = login.getToken();
+        final String apiToken = login.token();
         apiClient.setApiToken(apiToken);
         return apiToken;
     }
@@ -89,11 +91,31 @@ public class BaseResource
     {
         return callApi(request, type, false);
     }
+
+    /**
+     * Main API call method. Takes in a {@link HttpUriRequest} comprising of a
+     * URI and method
+     *
+     * @param request
+     *            with the relevant URI and method (with associated data is
+     *            appropriate)
+     * @param type
+     * @return the type requested
+     * @throws IOException
+     *             if it's not possible to get a valid response from the API
+     * @throws GroupsIOApiException
+     *             if the API returns an error, or an error is experienced
+     *             during deserialisation
+     */
+    protected <T> T callApi(final HttpUriRequest request, final JavaType type) throws IOException, GroupsIOApiException
+    {
+        return callApi(request, type, false);
+    }
     
     /**
      * Main API call method. Takes in a {@link HttpUriRequest} comprising of a
      * URI and method
-     * 
+     *
      * @param request
      *            with the relevant URI and method (with associated data is
      *            appropriate)
@@ -110,6 +132,29 @@ public class BaseResource
      */
     protected <T> T callApi(final HttpUriRequest request, final Class<T> type, final Boolean login) throws IOException, GroupsIOApiException
     {
+        return callApi(request, TypeUtils.generateType(typeFactory -> typeFactory.constructType(new TypeReference<T>(){ })), login);
+    }
+
+    /**
+     * Main API call method. Takes in a {@link HttpUriRequest} comprising of a
+     * URI and method
+     *
+     * @param request
+     *            with the relevant URI and method (with associated data is
+     *            appropriate)
+     * @param type
+     *            what the response should interpreted as
+     * @param login
+     *            whether this is a call specifically to login
+     * @return the type requested
+     * @throws IOException
+     *             if it's not possible to get a valid response from the API
+     * @throws GroupsIOApiException
+     *             if the API returns an error, or an error is experienced
+     *             during deserialisation
+     */
+    protected <T> T callApi(final HttpUriRequest request, final JavaType type, final Boolean login) throws IOException, GroupsIOApiException
+    {
         try (final CloseableHttpClient client = getHttpClient(login, request))
         {
             final HttpResponse response = client.execute(request);
@@ -121,9 +166,9 @@ public class BaseResource
             }
             try
             {
-                return type.cast(OM.readValue(bytes, Class.forName(type.getName())));
+                return OM.readValue(bytes, type);
             }
-            catch (final JsonMappingException | ClassNotFoundException jme)
+            catch (final JsonMappingException e)
             {
                 throw new GroupsIOApiException(mapToError(bytes));
             }

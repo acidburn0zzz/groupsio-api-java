@@ -1,5 +1,19 @@
 package com.github.lake54.groupsio.api.resource;
 
+import com.fasterxml.jackson.databind.JavaType;
+import com.github.lake54.groupsio.api.GroupsIOApiClient;
+import com.github.lake54.groupsio.api.domain.Page;
+import com.github.lake54.groupsio.api.domain.Subscription;
+import com.github.lake54.groupsio.api.domain.User;
+import com.github.lake54.groupsio.api.exception.GroupsIOApiException;
+import com.github.lake54.groupsio.api.jackson.TypeUtils;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.message.BasicNameValuePair;
+
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -8,22 +22,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpRequestBase;
-import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.message.BasicNameValuePair;
-
-import com.github.lake54.groupsio.api.GroupsIOApiClient;
-import com.github.lake54.groupsio.api.domain.Page;
-import com.github.lake54.groupsio.api.domain.Subscription;
-import com.github.lake54.groupsio.api.domain.User;
-import com.github.lake54.groupsio.api.exception.GroupsIOApiException;
-
 public class UserResource extends BaseResource
 {
-    
+    private static final JavaType SUBSCRIPTION_PAGE_TYPE = TypeUtils.generateType(factory -> {
+        return factory.constructParametricType(Page.class, Subscription.class);
+    });
+
     public UserResource(final GroupsIOApiClient apiClient, final String baseUrl)
     {
         super(apiClient, baseUrl);
@@ -80,16 +84,16 @@ public class UserResource extends BaseResource
         final HttpGet request = new HttpGet();
         request.setURI(uri.build());
         
-        Page page = callApi(request, Page.class);
+        Page<Subscription> page = callApi(request, SUBSCRIPTION_PAGE_TYPE);
+        final List<Subscription> subscriptions = new ArrayList<>();
+        subscriptions.addAll(page.data());
         
-        final List<Subscription> subscriptions = Arrays.asList(OM.convertValue(page.getData(), Subscription[].class));
-        
-        while (page.getHasMore())
+        while (page.hasMore())
         {
-            uri.setParameter("page_token", page.getNextPageToken().toString());
+            uri.setParameter("page_token", "" + page.nextPageToken());
             request.setURI(uri.build());
-            page = callApi(request, Page.class);
-            subscriptions.addAll(Arrays.asList(OM.convertValue(page.getData(), Subscription[].class)));
+            page = callApi(request, SUBSCRIPTION_PAGE_TYPE);
+            subscriptions.addAll(Arrays.asList(OM.convertValue(page.data(), Subscription[].class)));
         }
         
         return subscriptions;

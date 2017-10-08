@@ -1,90 +1,26 @@
 package com.github.lake54.groupsio.api.domain;
 
-import org.apache.commons.lang3.builder.EqualsBuilder;
-import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.apache.commons.lang3.builder.ToStringBuilder;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import org.immutables.value.Value;
 
-public class Poster
-{
-    
-    private String name;
-    private Integer userId;
-    
-    /**
-     * No args constructor for use in serialization
-     */
-    public Poster()
-    {
+import javax.annotation.Nonnull;
+
+import static org.immutables.value.Value.Style.ImplementationVisibility.PACKAGE;
+
+@Value.Immutable(builder = false, copy = false)
+@Value.Style(visibility = PACKAGE)
+@JsonSerialize(as = ImmutablePoster.class)
+@JsonDeserialize(as = ImmutablePoster.class)
+public abstract class Poster extends Model {
+
+    @Value.Parameter
+    public abstract String name();
+
+    @Value.Parameter
+    public abstract String userId();
+
+    public static Poster create(@Nonnull String name, @Nonnull String userId) {
+        return ImmutablePoster.of(name, userId);
     }
-    
-    /**
-     * @param userId
-     * @param name
-     */
-    public Poster(final String name, final Integer userId)
-    {
-        super();
-        this.name = name;
-        this.userId = userId;
-    }
-    
-    public String getName()
-    {
-        return name;
-    }
-    
-    public void setName(final String name)
-    {
-        this.name = name;
-    }
-    
-    public Poster withName(final String name)
-    {
-        this.name = name;
-        return this;
-    }
-    
-    public Integer getUserId()
-    {
-        return userId;
-    }
-    
-    public void setUserId(final Integer userId)
-    {
-        this.userId = userId;
-    }
-    
-    public Poster withUserId(final Integer userId)
-    {
-        this.userId = userId;
-        return this;
-    }
-    
-    @Override
-    public String toString()
-    {
-        return ToStringBuilder.reflectionToString(this);
-    }
-    
-    @Override
-    public int hashCode()
-    {
-        return new HashCodeBuilder().append(name).append(userId).toHashCode();
-    }
-    
-    @Override
-    public boolean equals(final Object other)
-    {
-        if (other == this)
-        {
-            return true;
-        }
-        if ((other instanceof Poster) == false)
-        {
-            return false;
-        }
-        final Poster rhs = ((Poster) other);
-        return new EqualsBuilder().append(name, rhs.name).append(userId, rhs.userId).isEquals();
-    }
-    
 }

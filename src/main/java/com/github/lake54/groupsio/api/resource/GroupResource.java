@@ -1,13 +1,13 @@
 package com.github.lake54.groupsio.api.resource;
 
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-
+import com.fasterxml.jackson.databind.JavaType;
+import com.github.lake54.groupsio.api.GroupsIOApiClient;
+import com.github.lake54.groupsio.api.domain.Error;
+import com.github.lake54.groupsio.api.domain.Group;
+import com.github.lake54.groupsio.api.domain.Page;
+import com.github.lake54.groupsio.api.domain.Permissions;
+import com.github.lake54.groupsio.api.exception.GroupsIOApiException;
+import com.github.lake54.groupsio.api.jackson.TypeUtils;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
@@ -15,17 +15,21 @@ import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.message.BasicNameValuePair;
 
-import com.github.lake54.groupsio.api.GroupsIOApiClient;
-import com.github.lake54.groupsio.api.domain.Error;
-import com.github.lake54.groupsio.api.domain.Group;
-import com.github.lake54.groupsio.api.domain.Page;
-import com.github.lake54.groupsio.api.domain.Permissions;
-import com.github.lake54.groupsio.api.exception.GroupsIOApiException;
-import com.github.lake54.groupsio.api.exception.GroupsIOApiExceptionType;
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import static com.github.lake54.groupsio.api.domain.Error.Type.INADEQUATE_PERMISSIONS;
 
 public class GroupResource extends BaseResource
 {
-    
+    private static final JavaType GROUP_PAGE_TYPE = TypeUtils.generateType(factory -> {
+        return factory.constructParametricType(Page.class, Group.class);
+    });
+
     public GroupResource(final GroupsIOApiClient apiClient, final String baseUrl)
     {
         super(apiClient, baseUrl);
@@ -59,7 +63,7 @@ public class GroupResource extends BaseResource
      */
     public Group getGroup(final Integer groupId) throws URISyntaxException, IOException, GroupsIOApiException
     {
-        if (apiClient.group().getPermissions(groupId).getManageGroupSettings())
+        if (apiClient.group().getPermissions(groupId).manageGroupSettings())
         {
             final URIBuilder uri = new URIBuilder().setPath(baseUrl + "getgroup");
             uri.setParameter("group_id", groupId.toString());
@@ -70,8 +74,7 @@ public class GroupResource extends BaseResource
         }
         else
         {
-            final Error error = new Error();
-            error.setType(GroupsIOApiExceptionType.INADEQUATE_PERMISSIONS);
+            final Error error = Error.create(INADEQUATE_PERMISSIONS);
             throw new GroupsIOApiException(error);
         }
     }
@@ -94,15 +97,16 @@ public class GroupResource extends BaseResource
         final HttpRequestBase request = new HttpGet();
         request.setURI(uri.build());
         
-        Page page = callApi(request, Page.class);
-        final List<Group> subgroups = Arrays.asList(OM.convertValue(page.getData(), Group[].class));
+        Page<Group> page = callApi(request, GROUP_PAGE_TYPE);
+        final List<Group> subgroups = new ArrayList<>();
+        subgroups.addAll(page.data());
         
-        while (page.getHasMore())
+        while (page.hasMore())
         {
-            uri.setParameter("page_token", page.getNextPageToken().toString());
+            uri.setParameter("page_token", "" + page.nextPageToken());
             request.setURI(uri.build());
-            page = callApi(request, Page.class);
-            subgroups.addAll(Arrays.asList(OM.convertValue(page.getData(), Group[].class)));
+            page = callApi(request, GROUP_PAGE_TYPE);
+            subgroups.addAll(page.data());
         }
         
         return subgroups;
@@ -133,7 +137,7 @@ public class GroupResource extends BaseResource
      */
     public Group updateGroup(final Group group) throws URISyntaxException, IOException, GroupsIOApiException
     {
-        if (apiClient.group().getPermissions(group.getId()).getManageGroupSettings())
+        if (apiClient.group().getPermissions(group.id()).manageGroupSettings())
         {
             final URIBuilder uri = new URIBuilder().setPath(baseUrl + "updategroup");
             final HttpPost request = new HttpPost();
@@ -151,8 +155,7 @@ public class GroupResource extends BaseResource
         }
         else
         {
-            final Error error = new Error();
-            error.setType(GroupsIOApiExceptionType.INADEQUATE_PERMISSIONS);
+            final Error error = Error.create(INADEQUATE_PERMISSIONS);
             throw new GroupsIOApiException(error);
         }
     }
