@@ -262,6 +262,39 @@ public class MemberResource extends BaseResource
     }
 
     /**
+     * Remove members directly from a group
+     *
+     * @param groupId
+     *      of the group they should be removed from
+     * @param emails
+     *      a list of email address to remove.
+     * @throws URISyntaxException
+     * @throws IOException
+     * @throws GroupsIOApiException
+     */
+    public void bulkRemoveMembers(final Integer groupId, List<String> emails)
+        throws URISyntaxException, IOException, GroupsIOApiException
+    {
+
+        if (apiClient.group().getPermissions(groupId).getInviteMembers())
+        {
+            final URIBuilder uri = new URIBuilder().setPath(baseUrl + "bulkremovemembers");
+            uri.setParameter("group_id", groupId.toString());
+            uri.setParameter("emails", String.join("\n", emails));
+            final HttpRequestBase request = new HttpGet();
+            request.setURI(uri.build());
+
+            callApi(request, DirectAdd.class);
+        }
+        else
+        {
+            final Error error = new Error();
+            error.setType(GroupsIOApiExceptionType.INADEQUATE_PERMISSIONS);
+            throw new GroupsIOApiException(error);
+        }
+    }
+
+    /**
      * Add members directly to a group
      *
      * @param groupId
