@@ -2,385 +2,378 @@ package com.github.lake54.groupsio.api.resource;
 
 import com.fasterxml.jackson.databind.JavaType;
 import com.github.lake54.groupsio.api.GroupsIOApiClient;
-import com.github.lake54.groupsio.api.domain.results.DirectAddResults;
-import com.github.lake54.groupsio.api.domain.Error;
-import com.github.lake54.groupsio.api.domain.Page;
+import com.github.lake54.groupsio.api.GroupsIOApiRequest;
 import com.github.lake54.groupsio.api.domain.Subscription;
+import com.github.lake54.groupsio.api.domain.results.BulkRemoveResults;
+import com.github.lake54.groupsio.api.domain.results.DirectAddResults;
+import com.github.lake54.groupsio.api.domain.results.InviteResults;
 import com.github.lake54.groupsio.api.exception.GroupsIOApiException;
 import com.github.lake54.groupsio.api.jackson.TypeUtils;
-import org.apache.commons.lang3.NotImplementedException;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpRequestBase;
-import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.message.BasicNameValuePair;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 
 import static com.github.lake54.groupsio.api.domain.Error.Type.INADEQUATE_PERMISSIONS;
 
+/**
+ * Resource class based around all operations related to group members.
+ */
 public class MemberResource extends BaseResource {
 
+    /**
+     * A static reference to use when de-serializing pages of subscriptions.
+     */
     private static final JavaType SUBSCRIPTION_PAGE_TYPE = TypeUtils
-        .generateType(factory -> factory.constructParametricType(Page.class, Subscription.class));
+        .createPaginationType(Subscription.class);
 
-    public MemberResource(GroupsIOApiClient apiClient) {
+    /**
+     * Creates a new resource using a client instance.
+     *
+     * @param apiClient
+     *      the {@link GroupsIOApiClient} used for requests.
+     */
+    public MemberResource(@Nonnull GroupsIOApiClient apiClient) {
         super(apiClient);
     }
-    
-    /**
-     * Gets a user's {@link Subscription} for the specified group and member IDs
-     * 
-     * @return the user's {@link Subscription} for the specified group ID
-     * @throws URISyntaxException
-     * @throws IOException
-     * @throws GroupsIOApiException
-     */
-    public Subscription getMemberInGroup(final Integer groupId, final Integer memberId)
-            throws URISyntaxException, IOException, GroupsIOApiException {
-        if (!apiClient.group().getPermissions(groupId).viewMembers()) {
-            final Error error = Error.create(INADEQUATE_PERMISSIONS);
-            throw new GroupsIOApiException(error);
-        }
 
-        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/getmember");
-        uri.setParameter("group_id", groupId.toString());
-        uri.setParameter("sub_id", memberId.toString());
-        final HttpRequestBase request = new HttpGet();
-        request.setURI(uri.build());
-
-        return callApi(request, Subscription.class);
-    }
-    
     /**
-     * Gets a list of members (represented by {@link Subscription}) subscribed
-     * to a particular group.
-     * 
+     * Approves a member in a group.
+     *
      * @param groupId
-     *            - which group to get members from
-     * @return {@link List}<{@link Subscription}> representing the subscribed
-     *         members
-     * @throws URISyntaxException
-     * @throws IOException
+     *      the identifier of the group to approve in.
+     * @param subscriptionId
+     *      the identifier of the subscription to approve.
+     * @return
+     *      the member's {@link Subscription} instance.
      * @throws GroupsIOApiException
+     *      on any errors dealing with data.
+     * @throws IOException
+     *      on any errors calling the API.
      */
-    public List<Subscription> getMembersInGroup(final Integer groupId)
-            throws URISyntaxException, IOException, GroupsIOApiException {
-        if (!apiClient.group().getPermissions(groupId).viewMembers()) {
-            final Error error = Error.create(INADEQUATE_PERMISSIONS);
-            throw new GroupsIOApiException(error);
+    public Subscription approveMember(int groupId, int subscriptionId) throws GroupsIOApiException, IOException {
+        if (!this.apiClient.group().getPermissions(groupId).managePendingMembers()) {
+            throw new GroupsIOApiException(INADEQUATE_PERMISSIONS);
         }
 
-        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/getmembers");
-        uri.setParameter("group_id", groupId.toString());
-        uri.setParameter("limit", MAX_RESULTS);
-        final HttpRequestBase request = new HttpGet();
-        request.setURI(uri.build());
+        GroupsIOApiRequest request = GroupsIOApiRequest
+            .builder("GET", "/approvemember")
+                .putParam("group_id", "" + groupId)
+                .putParam("sub_id", "" + subscriptionId)
+            .build();
 
-        Page<Subscription> page = callApi(request, SUBSCRIPTION_PAGE_TYPE);
-        final List<Subscription> subscriptions = new ArrayList<>();
-        subscriptions.addAll(page.data());
-
-        while (page.hasMore()) {
-            uri.setParameter("page_token", "" + page.nextPageToken());
-            request.setURI(uri.build());
-            page = callApi(request, SUBSCRIPTION_PAGE_TYPE);
-            subscriptions.addAll(page.data());
-        }
-
-        return subscriptions;
+        return this.apiClient.call(request, Subscription.class);
     }
-    
+
     /**
-     * Gets a list of members (represented by {@link Subscription}) subscribed
-     * to a particular group.
-     * 
+     * Bans a member from a group.
+     *
      * @param groupId
-     *            - which group to get members from
+     *      the group identifier to ban from.
+     * @param subscriptionId
+     *      the identifier of the subscription to ban.
+     * @return
+     *      the member's {@link Subscription} instance.
+     * @throws GroupsIOApiException
+     *      on any errors dealing with data.
+     * @throws IOException
+     *      on any errors calling the API.
+     */
+    public Subscription banMember(int groupId, int subscriptionId) throws GroupsIOApiException, IOException {
+        if (!this.apiClient.group().getPermissions(groupId).banMembers()
+            || !getMemberInGroup(groupId, subscriptionId).status().canBan()) {
+            throw new GroupsIOApiException(INADEQUATE_PERMISSIONS);
+        }
+
+        GroupsIOApiRequest request = GroupsIOApiRequest
+            .builder("GET", "/banmember")
+                .putParam("group_id", "" + groupId)
+                .putParam("sub_id", "" + subscriptionId)
+            .build();
+
+        return this.apiClient.call(request, Subscription.class);
+    }
+
+    /**
+     * Removes a batch of users from a group.
+     *
+     * @param groupId
+     *      the group identifier to remove from.
+     * @param emails
+     *      a list of user emails to remove.
+     * @return
+     *      a {@link BulkRemoveResults} object.
+     * @throws GroupsIOApiException
+     *      on any errors dealing with data.
+     * @throws IOException
+     *      on any errors calling the API.
+     */
+    public BulkRemoveResults bulkRemoveMembers(int groupId, List<String> emails) throws GroupsIOApiException, IOException {
+        if (this.apiClient.group().getPermissions(groupId).inviteMembers()) {
+            throw new GroupsIOApiException(INADEQUATE_PERMISSIONS);
+        }
+
+        GroupsIOApiRequest request = GroupsIOApiRequest
+            .builder("GET", "/bulkremovemembers")
+                .putParam("group_id", "" + groupId)
+                .putParam("emails", String.join("\n", emails))
+            .build();
+
+        return this.apiClient.call(request, BulkRemoveResults.class);
+    }
+
+    /**
+     * Directly adds a batch of users to a group.
+     *
+     * @param groupId
+     *      the group identifier to add to.
+     * @param emails
+     *      a list of user emails to add.
+     * @return
+     *      a {@link DirectAddResults} object.
+     * @throws GroupsIOApiException
+     *      on any errors dealing with data.
+     * @throws IOException
+     *      on any errors calling the API.
+     */
+    public DirectAddResults directAddMember(int groupId, List<String> emails) throws GroupsIOApiException, IOException {
+        if (!this.apiClient.group().getPermissions(groupId).inviteMembers()) {
+            throw new GroupsIOApiException(INADEQUATE_PERMISSIONS);
+        }
+
+        GroupsIOApiRequest request = GroupsIOApiRequest
+            .builder("GET", "/directadd")
+                .putParam("group_id", "" + groupId)
+                .putParam("emails", String.join("\n", emails))
+            .build();
+
+        return this.apiClient.call(request, DirectAddResults.class);
+    }
+
+    /**
+     * Gets a member's {@link Subscription} for the specified group identifiers.
+     *
+     * @param groupId
+     *      the group identifier to lookup.
+     * @param subscriptionId
+     *      the member identifier to lookup.
+     * @return
+     *      the member's {@link Subscription} instance.
+     * @throws GroupsIOApiException
+     *      on any errors dealing with data.
+     * @throws IOException
+     *      on any errors calling the API.
+     */
+    public Subscription getMemberInGroup(int groupId, int subscriptionId) throws GroupsIOApiException, IOException {
+        if (!this.apiClient.group().getPermissions(groupId).viewMembers()) {
+            throw new GroupsIOApiException(INADEQUATE_PERMISSIONS);
+        }
+
+        GroupsIOApiRequest request = GroupsIOApiRequest
+            .builder("GET", "/getmember")
+                .putParam("group_id", "" + groupId)
+                .putParam("sub_id", "" + subscriptionId)
+            .build();
+
+        return this.apiClient.call(request, Subscription.class);
+    }
+
+    /**
+     * Gets a list of members subscribed to a particular group.
+     *
+     * @param groupId
+     *      the group identifier to lookup.
+     * @return
+     *      a {@link List}<{@link Subscription}> representing the subscribed members.
+     * @throws GroupsIOApiException
+     *      on any errors dealing with data.
+     * @throws IOException
+     *      on any errors calling the API.
+     */
+    public List<Subscription> getMembersInGroup(int groupId) throws GroupsIOApiException, IOException {
+        if (!this.apiClient.group().getPermissions(groupId).viewMembers()) {
+            throw new GroupsIOApiException(INADEQUATE_PERMISSIONS);
+        }
+
+        GroupsIOApiRequest request = GroupsIOApiRequest
+            .builder("GET", "/getmembers")
+                .putParam("group_id", "" + groupId)
+                .putParam("limit", MAX_RESULTS)
+            .build();
+
+        return this.apiClient.paginate(request, SUBSCRIPTION_PAGE_TYPE);
+    }
+
+    /**
+     * Invites adds a batch of users to a group.
+     *
+     * @param groupId
+     *      the group identifier to invite to.
+     * @param emails
+     *      a list of user emails to invite.
+     * @return
+     *      a {@link InviteResults} object.
+     * @throws GroupsIOApiException
+     *      on any errors dealing with data.
+     * @throws IOException
+     *      on any errors calling the API.
+     */
+    public InviteResults inviteMember(int groupId, List<String> emails) throws GroupsIOApiException, IOException {
+        if (!this.apiClient.group().getPermissions(groupId).inviteMembers()) {
+            throw new GroupsIOApiException(INADEQUATE_PERMISSIONS);
+        }
+
+        GroupsIOApiRequest request = GroupsIOApiRequest
+            .builder("GET", "/invite")
+                .putParam("group_id", "" + groupId)
+                .putParam("emails", String.join("\n", emails))
+            .build();
+
+        return this.apiClient.call(request, InviteResults.class);
+    }
+
+    /**
+     * Removes a member from a group.
+     *
+     * @param groupId
+     *      the group identifier to remove from.
+     * @param subscriptionId
+     *      the member identifier to remove.
+     * @return
+     *      the member's {@link Subscription} instance.
+     * @throws GroupsIOApiException
+     *      on any errors dealing with data.
+     * @throws IOException
+     *      on any errors calling the API.
+     */
+    public Subscription removeMember(int groupId, int subscriptionId) throws GroupsIOApiException, IOException {
+        if (!this.apiClient.group().getPermissions(groupId).removeMembers()) {
+            throw new GroupsIOApiException(INADEQUATE_PERMISSIONS);
+        }
+
+        GroupsIOApiRequest request = GroupsIOApiRequest
+            .builder("GET", "/removemember")
+                .putParam("group_id", "" + groupId)
+                .putParam("sub_id", "" + subscriptionId)
+            .build();
+
+        return this.apiClient.call(request, Subscription.class);
+    }
+
+    /**
+     * Searches for a list of members subscribed to a particular group.
+     *
+     * @param groupId
+     *      the group identifier to search in.
      * @param query
-     *            - what to search for (will search over email or name)
-     * @return {@link List}<{@link Subscription}> representing the subscribed
-     *         members
-     * @throws URISyntaxException
-     * @throws IOException
+     *      what to search for (will search over email or name).
+     * @return
+     *      a {@link List}<{@link Subscription}> representing the subscribed members.
      * @throws GroupsIOApiException
-     */
-    public List<Subscription> searchMembers(final Integer groupId, final String query)
-            throws URISyntaxException, IOException, GroupsIOApiException {
-        if (!apiClient.group().getPermissions(groupId).viewMembers()) {
-            final Error error = Error.create(INADEQUATE_PERMISSIONS);
-            throw new GroupsIOApiException(error);
-        }
-
-        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/searchmembers");
-        uri.setParameter("group_id", groupId.toString());
-        uri.setParameter("q", query);
-        uri.setParameter("limit", MAX_RESULTS);
-        final HttpRequestBase request = new HttpGet();
-        request.setURI(uri.build());
-
-        Page<Subscription> page = callApi(request, SUBSCRIPTION_PAGE_TYPE);
-        final List<Subscription> subscriptions = new ArrayList<>();
-        subscriptions.addAll(page.data());
-
-        while (page.hasMore()) {
-            uri.setParameter("page_token", "" + page.nextPageToken());
-            request.setURI(uri.build());
-            page = callApi(request, SUBSCRIPTION_PAGE_TYPE);
-            subscriptions.addAll(Arrays.asList(OM.convertValue(page.data(), Subscription[].class)));
-        }
-
-        return subscriptions;
-    }
-    
-    /**
-     * Update a subscription to a group given a blank {@link Subscription}
-     * object with only the updated
-     * fields set.
-     * Example:
-     * 
-     * <pre>
-     * final Subscription subToUpdate = new Subscription();
-     * subToUpdate.setAutoFollowReplies(true);
-     * final Subscription updateSub = client.member().updateMember(subToUpdate);
-     * </pre>
-     * 
-     * @param subscription
-     *            - with only the updated fields set
-     * @return the full {@link Subscription} after a successful update
-     * @throws URISyntaxException
+     *      on any errors dealing with data.
      * @throws IOException
-     * @throws GroupsIOApiException
+     *      on any errors calling the API.
      */
-    public Subscription updateMember(final Subscription subscription)
-            throws URISyntaxException, IOException, GroupsIOApiException {
-        if (!apiClient.group().getPermissions(subscription.groupId()).manageMemberSubscriptionOptions()) {
-            final Error error = Error.create(INADEQUATE_PERMISSIONS);
-            throw new GroupsIOApiException(error);
+    public List<Subscription> searchMembers(int groupId, String query) throws GroupsIOApiException, IOException {
+        if (!this.apiClient.group().getPermissions(groupId).viewMembers()) {
+            throw new GroupsIOApiException(INADEQUATE_PERMISSIONS);
         }
 
-        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/updatemember");
-        final HttpPost request = new HttpPost();
-        final Map<String, Object> map = OM.convertValue(subscription, Map.class);
-        final List<BasicNameValuePair> postParameters = new ArrayList<>();
-        for (final Entry<String, Object> entry : map.entrySet())
-        {
-            postParameters.add(new BasicNameValuePair(entry.getKey(), entry.getValue().toString()));
-        }
-        request.setEntity(new UrlEncodedFormEntity(postParameters));
+        GroupsIOApiRequest request = GroupsIOApiRequest
+            .builder("GET", "/searchmembers")
+                .putParam("group_id", "" + groupId)
+                .putParam("limit", MAX_RESULTS)
+                .putParam("q", query)
+            .build();
 
-        request.setURI(uri.build());
-
-        return callApi(request, Subscription.class);
-    }
-    
-    /**
-     * Ban a member if they aren't already banned
-     * 
-     * @param groupId
-     *            of the group they belong to
-     * @param subscriptionId
-     *            of the subscription they have
-     * @return the user's {@link Subscription}
-     * @throws URISyntaxException
-     * @throws IOException
-     * @throws GroupsIOApiException
-     */
-    public Subscription banMember(final Integer groupId, final Integer subscriptionId)
-            throws URISyntaxException, IOException, GroupsIOApiException {
-
-        if (!apiClient.group().getPermissions(groupId).banMembers()
-                || !getMemberInGroup(groupId, subscriptionId).status().canBan()) {
-            final Error error = Error.create(INADEQUATE_PERMISSIONS);
-            throw new GroupsIOApiException(error);
-        }
-
-        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/banmember");
-        uri.setParameter("group_id", groupId.toString());
-        uri.setParameter("sub_id", subscriptionId.toString());
-        final HttpRequestBase request = new HttpGet();
-        request.setURI(uri.build());
-
-        return callApi(request, Subscription.class);
-    }
-    
-    /**
-     * Approve a member to a group
-     * 
-     * @param groupId
-     *            of the group they should belong to
-     * @param subscriptionId
-     *            of the subscription they have
-     * @return the user's {@link Subscription}
-     * @throws URISyntaxException
-     * @throws IOException
-     * @throws GroupsIOApiException
-     */
-    public Subscription approveMember(final Integer groupId, final Integer subscriptionId)
-            throws URISyntaxException, IOException, GroupsIOApiException {
-        if (!apiClient.group().getPermissions(groupId).managePendingMembers()) {
-            final Error error = Error.create(INADEQUATE_PERMISSIONS);
-            throw new GroupsIOApiException(error);
-        }
-
-        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/approvemember");
-        uri.setParameter("group_id", groupId.toString());
-        uri.setParameter("sub_id", subscriptionId.toString());
-        final HttpRequestBase request = new HttpGet();
-        request.setURI(uri.build());
-
-        return callApi(request, Subscription.class);
+        return this.apiClient.paginate(request, SUBSCRIPTION_PAGE_TYPE);
     }
 
     /**
-     * Remove members directly from a group
+     * Send a bounce probe to a specific member.
      *
      * @param groupId
-     *      of the group they should be removed from
-     * @param emails
-     *      a list of email address to remove.
-     * @throws URISyntaxException
-     * @throws IOException
-     * @throws GroupsIOApiException
-     */
-    public void bulkRemoveMembers(final Integer groupId, List<String> emails)
-            throws URISyntaxException, IOException, GroupsIOApiException {
-        if (apiClient.group().getPermissions(groupId).inviteMembers()) {
-            final Error error = Error.create(INADEQUATE_PERMISSIONS);
-            throw new GroupsIOApiException(error);
-        }
-
-        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/bulkremovemembers");
-        uri.setParameter("group_id", groupId.toString());
-        uri.setParameter("emails", String.join("\n", emails));
-        final HttpRequestBase request = new HttpGet();
-        request.setURI(uri.build());
-
-        callApi(request, DirectAddResults.class);
-    }
-
-    /**
-     * Add members directly to a group
-     *
-     * @param groupId
-     *      of the group they should be added to
-     * @param emails
-     *      a list of email address to add.
-     * @throws URISyntaxException
-     * @throws IOException
-     * @throws GroupsIOApiException
-     */
-    public void directAddMember(final Integer groupId, List<String> emails)
-            throws URISyntaxException, IOException, GroupsIOApiException {
-        if (!apiClient.group().getPermissions(groupId).inviteMembers()) {
-            final Error error = Error.create(INADEQUATE_PERMISSIONS);
-            throw new GroupsIOApiException(error);
-        }
-
-        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/directadd");
-        uri.setParameter("group_id", groupId.toString());
-        uri.setParameter("emails", String.join("\n", emails));
-        final HttpRequestBase request = new HttpGet();
-        request.setURI(uri.build());
-
-        callApi(request, DirectAddResults.class);
-    }
-    
-    public void inviteMember()
-    {
-        throw new NotImplementedException("Not implemented in client");
-    }
-    
-    /**
-     * Remove a member from a group
-     * 
-     * @param groupId
-     *            of the group they belong to
+     *      the group identifier to work under.
      * @param subscriptionId
-     *            of the subscription they have
-     * @return the user's {@link Subscription}
-     * @throws URISyntaxException
-     * @throws IOException
+     *      the identifier of the subscription.
+     * @return
+     *      the member's {@link Subscription} instance.
      * @throws GroupsIOApiException
-     */
-    public Subscription removeMember(final Integer groupId, final Integer subscriptionId)
-            throws URISyntaxException, IOException, GroupsIOApiException {
-        if (!apiClient.group().getPermissions(groupId).removeMembers()) {
-            final Error error = Error.create(INADEQUATE_PERMISSIONS);
-            throw new GroupsIOApiException(error);
-        }
-
-        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/removemember");
-        uri.setParameter("group_id", groupId.toString());
-        uri.setParameter("sub_id", subscriptionId.toString());
-        final HttpRequestBase request = new HttpGet();
-        request.setURI(uri.build());
-
-        return callApi(request, Subscription.class);
-    }
-    
-    /**
-     * Send a bounce probe to a user if they are bouncing
-     * 
-     * @param groupId
-     *            of the group they belong to
-     * @param subscriptionId
-     *            of the subscription they have
-     * @return the user's {@link Subscription}
-     * @throws URISyntaxException
+     *      on any errors dealing with data.
      * @throws IOException
-     * @throws GroupsIOApiException
+     *      on any errors calling the API.
      */
-    public Subscription sendBounceProbe(final Integer groupId, final Integer subscriptionId)
-            throws URISyntaxException, IOException, GroupsIOApiException {
-        if (!apiClient.group().getPermissions(groupId).manageMemberSubscriptionOptions()
+    public Subscription sendBounceProbe(int groupId, int subscriptionId) throws GroupsIOApiException, IOException {
+        if (!this.apiClient.group().getPermissions(groupId).manageMemberSubscriptionOptions()
                 || !getMemberInGroup(groupId, subscriptionId).userStatus().canSendBounceProbe()) {
-            final Error error = Error.create(INADEQUATE_PERMISSIONS);
-            throw new GroupsIOApiException(error);
+            throw new GroupsIOApiException(INADEQUATE_PERMISSIONS);
         }
 
-        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/sendbounceprobe");
-        uri.setParameter("group_id", groupId.toString());
-        uri.setParameter("sub_id", subscriptionId.toString());
-        final HttpRequestBase request = new HttpGet();
-        request.setURI(uri.build());
+        GroupsIOApiRequest request = GroupsIOApiRequest
+            .builder("GET", "/sendbounceprobe")
+                .putParam("group_id", "" + groupId)
+                .putParam("sub_id", "" + subscriptionId)
+            .build();
 
-        return callApi(request, Subscription.class);
+        return this.apiClient.call(request, Subscription.class);
     }
-    
+
     /**
-     * Send a confirmation email to a user if they are not yet confirmed
-     * 
+     * Send a confirmation email to a user if they are not yet confirmed.
+     *
      * @param groupId
-     *            of the group they belong to
+     *      the group identifier to work under.
      * @param subscriptionId
-     *            of the subscription they have
-     * @return the user's {@link Subscription}
-     * @throws URISyntaxException
-     * @throws IOException
+     *      the identifier of the subscription.
+     * @return
+     *      the member's {@link Subscription} instance.
      * @throws GroupsIOApiException
+     *      on any errors dealing with data.
+     * @throws IOException
+     *      on any errors calling the API.
      */
-    public Subscription sendConfirmationEmail(final Integer groupId, final Integer subscriptionId)
-            throws URISyntaxException, IOException, GroupsIOApiException {
-        if (!apiClient.group().getPermissions(groupId).manageMemberSubscriptionOptions()
+    public Subscription sendConfirmationEmail(int groupId, int subscriptionId) throws GroupsIOApiException, IOException {
+        if (!this.apiClient.group().getPermissions(groupId).manageMemberSubscriptionOptions()
                 || !getMemberInGroup(groupId, subscriptionId).userStatus().canSendConfirmationEmail()) {
-            final Error error = Error.create(INADEQUATE_PERMISSIONS);
-            throw new GroupsIOApiException(error);
+            throw new GroupsIOApiException(INADEQUATE_PERMISSIONS);
         }
 
-        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/sendconfirmation");
-        uri.setParameter("group_id", groupId.toString());
-        uri.setParameter("sub_id", subscriptionId.toString());
-        final HttpRequestBase request = new HttpGet();
-        request.setURI(uri.build());
+        GroupsIOApiRequest request = GroupsIOApiRequest
+            .builder("GET", "/sendbounceprobe")
+                .putParam("group_id", "" + groupId)
+                .putParam("sub_id", "" + subscriptionId)
+            .build();
 
-        return callApi(request, Subscription.class);
+        return this.apiClient.call(request, Subscription.class);
+    }
+
+    /**
+     * Updates a member given a {@link Subscription} object with only the updated
+     * fields set.
+     *
+     * Example:
+     *
+     * <pre>
+     *      Subscription subToUpdate = Subscription
+     *          .builder()
+     *              .autoFollowReplies(true)
+     *          .build();
+     *      Subscription updatedSub = client.member().updateMember(updatedSub);
+     * </pre>
+     *
+     * @param subscription
+     *      a subscription model to use to apply updates.
+     * @return
+     *      the full {@link Subscription} after a successful update.
+     * @throws GroupsIOApiException
+     *      on any errors dealing with data.
+     * @throws IOException
+     *      on any errors calling the API.
+     */
+    public Subscription updateMember(Subscription subscription) throws GroupsIOApiException, IOException {
+        if (!this.apiClient.group().getPermissions(subscription.groupId()).manageMemberSubscriptionOptions()) {
+            throw new GroupsIOApiException(INADEQUATE_PERMISSIONS);
+        }
+        return this.update("/updatemember", Subscription.class, subscription);
     }
 }

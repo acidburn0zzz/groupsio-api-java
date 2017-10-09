@@ -4,46 +4,38 @@ import com.github.lake54.groupsio.api.GroupsIOApiClient;
 import com.github.lake54.groupsio.api.domain.Topic;
 import com.github.lake54.groupsio.api.exception.GroupsIOApiException;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.util.List;
 
+/**
+ * Resource class based around all operations related to archives.
+ */
 public class ArchiveResource extends BaseResource {
 
-    public ArchiveResource(GroupsIOApiClient apiClient) {
+    /**
+     * Creates a new resource using a client instance.
+     *
+     * @param apiClient
+     *      the {@link GroupsIOApiClient} used for requests.
+     */
+    public ArchiveResource(@Nonnull GroupsIOApiClient apiClient) {
         super(apiClient);
     }
-    
+
     /**
-     * Gets a list of {@link Topic}s from the specified group.
-     * 
-     * @return {@link List}<{@link Topic}> representing the topics in the group
-     * @throws URISyntaxException
-     * @throws IOException
+     * Retrieves a list of topics for a group.
+     *
+     * @param groupId
+     *      the group identifier to retrieve for.
+     * @return
+     *      a list of {@link Topic} instances.
      * @throws GroupsIOApiException
+     *      on any errors dealing with data.
+     * @throws IOException
+     *      on any errors calling the API.
      */
-    public List<Topic> getTopics(final Integer groupId) throws URISyntaxException, IOException, GroupsIOApiException {
-        /*- Commented out until implemented in the API.
-        final URIBuilder uri = new URIBuilder().setPath(baseUrl + "gettopics");
-        uri.setParameter("group_id", groupId.toString());
-        uri.setParameter("limit", MAX_RESULTS);
-        final HttpRequestBase request = new HttpGet();
-        request.setURI(uri.build());
-        
-        Page page = callApi(request, Page.class);
-        
-        final List<Topic> topics = Arrays.asList(OM.convertValue(page.getData(), Topic[].class));
-        
-        while (page.getHasMore())
-        {
-            uri.setParameter("page_token", page.getNextPageToken().toString());
-            request.setURI(uri.build());
-            page = callApi(request, Page.class);
-            topics.addAll(Arrays.asList(OM.convertValue(page.getData(), Topic[].class)));
-        }
-        
-        return topics;
-        */
+    public List<Topic> getTopics(int groupId) throws IOException, GroupsIOApiException {
         throw new UnsupportedOperationException("Not available in API");
     }
 }

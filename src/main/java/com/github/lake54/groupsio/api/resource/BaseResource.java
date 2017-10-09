@@ -1,201 +1,72 @@
 package com.github.lake54.groupsio.api.resource;
 
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.github.lake54.groupsio.api.GroupsIOApiClient;
-import com.github.lake54.groupsio.api.domain.Error;
-import com.github.lake54.groupsio.api.domain.Login;
+import com.github.lake54.groupsio.api.GroupsIOApiRequest;
 import com.github.lake54.groupsio.api.exception.GroupsIOApiException;
 import com.github.lake54.groupsio.api.jackson.TypeUtils;
-import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.io.IOUtils;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpUriRequest;
-import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.message.BasicHeader;
+import com.google.common.base.Preconditions;
+import okhttp3.FormBody;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 /**
- * Base class for Groups.io resources.
- * Contains common methods to call into the API.
- * Only one method is public, {@link BaseResource#login(String)}, which can be
- * called by any child class (rather than creating a BaseResource instance).
+ * Base resource class adding base implementations for all resources.
  */
-public class BaseResource {
+abstract class BaseResource {
 
-    protected final GroupsIOApiClient apiClient;
-    protected static final String MAX_RESULTS = "100";
-    public static final ObjectMapper OM = new ObjectMapper().setPropertyNamingStrategy(
-            PropertyNamingStrategy.SNAKE_CASE).configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-            .setSerializationInclusion(Include.NON_NULL);
-    
-    public BaseResource(GroupsIOApiClient client) {
-        this.apiClient = client;
-    }
-    
     /**
-     * Carry out initial login to the Groups.io API and set the API token.
-     * 
-     * @return API token for the configured user as a {@link String}
-     * @throws URISyntaxException
-     * @throws GroupsIOApiException
-     * @throws IOException
+     * Maximum limit for all pagination requests.
      */
-    public String login(final String password) throws URISyntaxException, GroupsIOApiException, IOException {
-        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/login");
-        uri.setParameter("email", apiClient.getEmail());
-        uri.setParameter("password", password);
-        final HttpGet request = new HttpGet();
-        request.setURI(uri.build());
-        
-        final Login login = callApi(request, Login.class, true);
-        final String apiToken = login.token();
-        apiClient.setApiToken(apiToken);
-        return apiToken;
-    }
-    
+    static final String MAX_RESULTS = "100";
+
     /**
-     * Main API call method. Takes in a {@link HttpUriRequest} comprising of a
-     * URI and method
-     * 
-     * @param request
-     *            with the relevant URI and method (with associated data is
-     *            appropriate)
-     * @param type
-     * @return the type requested
-     * @throws IOException
-     *             if it's not possible to get a valid response from the API
-     * @throws GroupsIOApiException
-     *             if the API returns an error, or an error is experienced
-     *             during deserialisation
+     * Internal client instances to use for API calls.
      */
-    protected <T> T callApi(final HttpUriRequest request, final Class<T> type) throws IOException, GroupsIOApiException {
-        return callApi(request, type, false);
+    final GroupsIOApiClient apiClient;
+
+    /**
+     * Creates a new resource using a client instance.
+     *
+     * @param apiClient
+     *      the {@link GroupsIOApiClient} used for requests.
+     */
+    BaseResource(@Nonnull GroupsIOApiClient apiClient) {
+        this.apiClient = Preconditions.checkNotNull(apiClient);
     }
 
     /**
-     * Main API call method. Takes in a {@link HttpUriRequest} comprising of a
-     * URI and method
+     * Updates an object type via the API.
      *
-     * @param request
-     *            with the relevant URI and method (with associated data is
-     *            appropriate)
-     * @param type
-     * @return the type requested
-     * @throws IOException
-     *             if it's not possible to get a valid response from the API
-     * @throws GroupsIOApiException
-     *             if the API returns an error, or an error is experienced
-     *             during deserialisation
-     */
-    protected <T> T callApi(final HttpUriRequest request, final JavaType type) throws IOException, GroupsIOApiException {
-        return callApi(request, type, false);
-    }
-    
-    /**
-     * Main API call method. Takes in a {@link HttpUriRequest} comprising of a
-     * URI and method
-     *
-     * @param request
-     *            with the relevant URI and method (with associated data is
-     *            appropriate)
-     * @param type
-     *            what the response should interpreted as
-     * @param login
-     *            whether this is a call specifically to login
-     * @return the type requested
-     * @throws IOException
-     *             if it's not possible to get a valid response from the API
-     * @throws GroupsIOApiException
-     *             if the API returns an error, or an error is experienced
-     *             during deserialisation
-     */
-    protected <T> T callApi(final HttpUriRequest request, final Class<T> type, final Boolean login) throws IOException, GroupsIOApiException {
-        return callApi(request, TypeUtils.generateType(typeFactory -> typeFactory.constructType(new TypeReference<T>(){ })), login);
-    }
-
-    /**
-     * Main API call method. Takes in a {@link HttpUriRequest} comprising of a
-     * URI and method
-     *
-     * @param request
-     *            with the relevant URI and method (with associated data is
-     *            appropriate)
-     * @param type
-     *            what the response should interpreted as
-     * @param login
-     *            whether this is a call specifically to login
-     * @return the type requested
-     * @throws IOException
-     *             if it's not possible to get a valid response from the API
-     * @throws GroupsIOApiException
-     *             if the API returns an error, or an error is experienced
-     *             during deserialisation
-     */
-    protected <T> T callApi(final HttpUriRequest request, final JavaType type, final Boolean login) throws IOException, GroupsIOApiException {
-        try (final CloseableHttpClient client = getHttpClient(login, request)) {
-            final HttpResponse response = client.execute(request);
-            final InputStream stream = response.getEntity().getContent();
-            final byte[] bytes = IOUtils.toByteArray(stream);
-            if (response.getStatusLine().getStatusCode() != 200) {
-                throw new GroupsIOApiException(mapToError(bytes));
-            }
-            try {
-                return OM.readValue(bytes, type);
-            }
-            catch (final JsonMappingException e) {
-                throw new GroupsIOApiException(mapToError(bytes));
-            }
-        }
-    }
-    
-    /**
-     * Given an error response, return an {@link Error} object.
-     * 
-     * @param bytes
-     *            from the API response
-     * @return an {@link Error} representing the API's response.
-     * @throws JsonParseException
-     * @throws JsonMappingException
-     * @throws IOException
-     */
-    private Error mapToError(final byte[] bytes) throws IOException {
-        return OM.readValue(bytes, Error.class);
-    }
-    
-    /**
-     * Get a valid {@link HttpClient} to use, with a valid token.
-     * 
-     * @param login
+     * @param path
+     *      the path to use for the update operation.
+     * @param tClass
+     *      the class type being updated.
+     * @param object
+     *      the object update to apply.
      * @return
+     *      an updated object instance.
+     * @throws GroupsIOApiException
+     *      on any errors dealing with data.
+     * @throws IOException
+     *      on any errors calling the API.
      */
-    private CloseableHttpClient getHttpClient(final Boolean login, final HttpUriRequest request) {
-        final HttpClientBuilder builder = HttpClientBuilder.create();
-        String key;
-        // if (apiClient.getApiToken() == null || apiClient.getApiToken())
-        if (login) {
-            key = apiClient.getApiKey();
-        } else {
-            key = apiClient.getApiToken();
+    <T> T update(String path, Class<T> tClass, T object) throws GroupsIOApiException, IOException {
+        FormBody.Builder formBuilder = new FormBody.Builder();
+
+        Map<String, Object> data = TypeUtils.convert(object, factory ->
+            factory.constructMapLikeType(Map.class, String.class, Object.class));
+
+        for (Map.Entry<String, Object> entry : data.entrySet()) {
+            formBuilder.add(entry.getKey(), entry.getValue().toString());
         }
-        key += ":";
-        final byte[] credentials = Base64.encodeBase64(key.getBytes(StandardCharsets.UTF_8));
-        final BasicHeader authHeader = new BasicHeader("Authorization", "Basic " + new String(credentials, StandardCharsets.UTF_8));
-        request.addHeader(authHeader);
-        return builder.build();
+
+        GroupsIOApiRequest request = GroupsIOApiRequest
+            .builder("GET", path)
+                .body(formBuilder.build())
+            .build();
+
+        return this.apiClient.call(request, tClass);
     }
 }

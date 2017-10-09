@@ -2,150 +2,188 @@ package com.github.lake54.groupsio.api.resource;
 
 import com.fasterxml.jackson.databind.JavaType;
 import com.github.lake54.groupsio.api.GroupsIOApiClient;
-import com.github.lake54.groupsio.api.domain.Error;
+import com.github.lake54.groupsio.api.GroupsIOApiRequest;
 import com.github.lake54.groupsio.api.domain.Group;
-import com.github.lake54.groupsio.api.domain.Page;
 import com.github.lake54.groupsio.api.domain.Permissions;
+import com.github.lake54.groupsio.api.domain.enums.group.GroupPrivacy;
 import com.github.lake54.groupsio.api.exception.GroupsIOApiException;
 import com.github.lake54.groupsio.api.jackson.TypeUtils;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpRequestBase;
-import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.message.BasicNameValuePair;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 
 import static com.github.lake54.groupsio.api.domain.Error.Type.INADEQUATE_PERMISSIONS;
 
+/**
+ * Resource class based around all operations related to groups.
+ */
 public class GroupResource extends BaseResource {
 
+    /**
+     * A static reference to use when de-serializing pages of groups.
+     */
     private static final JavaType GROUP_PAGE_TYPE = TypeUtils
-        .generateType(factory -> factory.constructParametricType(Page.class, Group.class));
+        .createPaginationType(Group.class);
 
-    public GroupResource(GroupsIOApiClient apiClient) {
+    /**
+     * Creates a new resource using a client instance.
+     *
+     * @param apiClient
+     *      the {@link GroupsIOApiClient} used for requests.
+     */
+    public GroupResource(@Nonnull GroupsIOApiClient apiClient) {
         super(apiClient);
     }
-    
-    /**
-     * Gets a user's {@link Permissions} for the specified group ID
-     * 
-     * @return the user's {@link Permissions} for the specified group ID
-     * @throws URISyntaxException
-     * @throws IOException
-     * @throws GroupsIOApiException
-     */
-    public Permissions getPermissions(final Integer groupId) throws URISyntaxException, IOException, GroupsIOApiException {
-        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/getperms");
-        uri.setParameter("group_id", groupId.toString());
-        final HttpRequestBase request = new HttpGet();
-        request.setURI(uri.build());
-        
-        return callApi(request, Permissions.class);
-    }
-    
-    /**
-     * Gets a {@link Group} for the specified group ID
-     * 
-     * @return the {@link Group} for the specified group ID
-     * @throws URISyntaxException
-     * @throws IOException
-     * @throws GroupsIOApiException
-     */
-    public Group getGroup(final Integer groupId) throws URISyntaxException, IOException, GroupsIOApiException {
-        if (!apiClient.group().getPermissions(groupId).manageGroupSettings()) {
-            final Error error = Error.create(INADEQUATE_PERMISSIONS);
-            throw new GroupsIOApiException(error);
-        }
 
-        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/getgroup");
-        uri.setParameter("group_id", groupId.toString());
-        final HttpRequestBase request = new HttpGet();
-        request.setURI(uri.build());
-
-        return callApi(request, Group.class);
-    }
-    
     /**
-     * Gets a list of groups for a given group ID
-     * 
+     * Creates a subgroup for the specified group identifier.
+     *
      * @param groupId
-     *            to fetch subgroups for
-     * @return {@link List}<{@link Group}> belonging to a parent group.
-     * @throws URISyntaxException
-     * @throws IOException
+     *      the identifier of the parent group.
+     * @param name
+     *      the name of the group to create.
+     * @param description
+     *      the description of the group to create.
+     * @param privacy
+     *      the privacy of the group to create.
+     * @return
+     *      the full {@link Group} instance after creation.
      * @throws GroupsIOApiException
+     *      on any errors dealing with data.
+     * @throws IOException
+     *      on any errors calling the API.
      */
-    public List<Group> getSubgroups(final Integer groupId) throws URISyntaxException, IOException, GroupsIOApiException {
-        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/getsubgroups");
-        uri.setParameter("group_id", groupId.toString());
-        uri.setParameter("limit", MAX_RESULTS);
-        final HttpRequestBase request = new HttpGet();
-        request.setURI(uri.build());
-        
-        Page<Group> page = callApi(request, GROUP_PAGE_TYPE);
-        final List<Group> subgroups = new ArrayList<>();
-        subgroups.addAll(page.data());
-        
-        while (page.hasMore()) {
-            uri.setParameter("page_token", "" + page.nextPageToken());
-            request.setURI(uri.build());
-            page = callApi(request, GROUP_PAGE_TYPE);
-            subgroups.addAll(page.data());
-        }
-        
-        return subgroups;
+    public Group createSubgroup(int groupId,
+                                @Nonnull String name,
+                                @Nonnull String description,
+                                @Nonnull GroupPrivacy privacy) throws GroupsIOApiException, IOException {
+        GroupsIOApiRequest request = GroupsIOApiRequest
+            .builder("GET", "/createsubgroup")
+                .putParam("group_id", "" + groupId)
+                .putParam("sub_group_name", name)
+                .putParam("desc", description)
+                .putParam("privacy", privacy.name())
+            .build();
+
+        return this.apiClient.call(request, Group.class);
     }
-    
-    public void createSubGroup(final Integer groupId, final String name, final String description, final String privacy) {
-        throw new UnsupportedOperationException("Not implemented in API");
-    }
-    
+
     /**
-     * Update a group given a blank {@link Group} object with only the updated
-     * fields set.
-     * Example:
-     * 
-     * <pre>
-     * final Group groupToUpdate = new Group();
-     * groupToUpdate.setWebsite("https://github.com/lake54/groupsio-api-java");
-     * final Group updatedGroup = client.group().updateGroup(groupToUpdate);
-     * </pre>
-     * 
-     * @param group
-     *            - with only the updated fields set
-     * @return the full {@link Group} after a successful update
-     * @throws URISyntaxException
-     * @throws IOException
+     * Deletes a group via an identifier.
+     *
+     * @param groupId
+     *      the group identifier to remove.
      * @throws GroupsIOApiException
+     *      on any errors dealing with data.
+     * @throws IOException
+     *      on any errors calling the API.
      */
-    public Group updateGroup(final Group group) throws URISyntaxException, IOException, GroupsIOApiException {
-        if (!apiClient.group().getPermissions(group.id()).manageGroupSettings()) {
-            final Error error = Error.create(INADEQUATE_PERMISSIONS);
-            throw new GroupsIOApiException(error);
+    public void deleteGroup(int groupId) throws GroupsIOApiException, IOException {
+        if (!getPermissions(groupId).deleteGroup()) {
+            throw new GroupsIOApiException(INADEQUATE_PERMISSIONS);
         }
 
-        final URIBuilder uri = new URIBuilder().setPath(apiClient.getApiRoot() + "/updategroup");
-        final HttpPost request = new HttpPost();
-        final Map<String, Object> map = OM.convertValue(group, Map.class);
-        final List<BasicNameValuePair> postParameters = new ArrayList<>();
-        for (final Entry<String, Object> entry : map.entrySet()) {
-            postParameters.add(new BasicNameValuePair(entry.getKey(), entry.getValue().toString()));
-        }
-        request.setEntity(new UrlEncodedFormEntity(postParameters));
+        GroupsIOApiRequest request = GroupsIOApiRequest
+            .builder("GET", "/deletegroup")
+                .putParam("group_id", "" + groupId)
+                .putParam("understand", "I understand")
+            .build();
 
-        request.setURI(uri.build());
-
-        return callApi(request, Group.class);
+        this.apiClient.call(request, Object.class);
     }
-    
-    public void deleteGroup(final Integer groupId) {
-        throw new UnsupportedOperationException("Not implemented in API");
+
+    /**
+     * Gets a {@link Group} for the specified group.
+     *
+     * @return
+     *      the {@link Group} for the specified group identifier.
+     * @throws GroupsIOApiException
+     *      on any errors dealing with data.
+     * @throws IOException
+     *      on any errors calling the API.
+     */
+    public Group getGroup(int groupId) throws GroupsIOApiException, IOException {
+        if (!getPermissions(groupId).manageGroupSettings()) {
+            throw new GroupsIOApiException(INADEQUATE_PERMISSIONS);
+        }
+
+        GroupsIOApiRequest request = GroupsIOApiRequest
+            .builder("GET", "/getgroup")
+                .putParam("group_id", "" + groupId)
+            .build();
+
+        return this.apiClient.call(request, Group.class);
+    }
+
+    /**
+     * Gets a user's {@link Permissions} for the specified group.
+     *
+     * @return
+     *      the user's {@link Permissions} for the specified group identifier.
+     * @throws GroupsIOApiException
+     *      on any errors dealing with data.
+     * @throws IOException
+     *      on any errors calling the API.
+     */
+    public Permissions getPermissions(int groupId) throws GroupsIOApiException, IOException {
+        GroupsIOApiRequest request = GroupsIOApiRequest
+            .builder("GET", "/getperms")
+                .putParam("group_id", "" + groupId)
+            .build();
+
+        return this.apiClient.call(request, Permissions.class);
+    }
+
+    /**
+     * Gets a list of groups for a given group identifier.
+     *
+     * @param groupId
+     *      the group identifier to fetch subgroups for.
+     * @return
+     *      a {@link List}<{@link Group}> belonging to a parent group.
+     * @throws GroupsIOApiException
+     *      on any errors dealing with data.
+     * @throws IOException
+     *      on any errors calling the API.
+     */
+    public List<Group> getSubgroups(int groupId) throws GroupsIOApiException, IOException {
+        GroupsIOApiRequest request = GroupsIOApiRequest
+            .builder("GET", "/getsubgroups")
+                .putParam("group_id", "" + groupId)
+                .putParam("limit", MAX_RESULTS)
+            .build();
+
+        return this.apiClient.paginate(request, GROUP_PAGE_TYPE);
+    }
+
+    /**
+     * Updates a group given a {@link Group} object with only the updated
+     * fields set.
+     *
+     * Example:
+     *
+     * <pre>
+     *      Group groupToUpdate = Group
+     *          .builder()
+     *              .website("https://github.com/lake54/groupsio-api-java")
+     *          .build();
+     *      Group updatedGroup = client.group().updateGroup(groupToUpdate);
+     * </pre>
+     *
+     * @param group
+     *      a group model to use to apply updates.
+     * @return
+     *      the full {@link Group} after a successful update.
+     * @throws GroupsIOApiException
+     *      on any errors dealing with data.
+     * @throws IOException
+     *      on any errors calling the API.
+     */
+    public Group updateGroup(Group group) throws IOException, GroupsIOApiException {
+        if (!getPermissions(group.id()).manageGroupSettings()) {
+            throw new GroupsIOApiException(INADEQUATE_PERMISSIONS);
+        }
+        return this.update("/updategroup", Group.class, group);
     }
 }
