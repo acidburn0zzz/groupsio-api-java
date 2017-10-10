@@ -73,7 +73,7 @@ public abstract class SubscriptionBase extends Model {
     @JsonProperty("message_report_notify")
     public abstract Optional<SubscriptionNotify> messageReportNotify();
 
-    // TODO: seemingly some API bug returning ""
+    // TODO: need to report a request that this be a list, not CSV
     // @JsonProperty("mod_permissions")
     // public abstract SubscriptionPermission modPermissions();
 
@@ -168,7 +168,7 @@ public abstract class SubscriptionBase extends Model {
 
         Builder messageReportNotify(SubscriptionNotify messageReportNotify);
 
-        // TODO: seemingly some API bug returning ""
+        // TODO: need to report a request that this be a list, not CSV
         // Builder modPermissions(SubscriptionPermission modPermissions);
 
         Builder ownerMsgNotify(SubscriptionOwnerMessageNotify ownerMsgNotify);
