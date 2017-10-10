@@ -1,8 +1,9 @@
 package com.github.lake54.groupsio.api.domain;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.github.lake54.groupsio.api.domain.enums.error.ErrorType;
 import org.immutables.value.Value;
 
 import javax.annotation.Nonnull;
@@ -15,31 +16,27 @@ import static org.immutables.value.Value.Style.ImplementationVisibility.PACKAGE;
 @Value.Style(visibility = PACKAGE)
 @JsonSerialize(as = ImmutableError.class)
 @JsonDeserialize(as = ImmutableError.class)
-@JsonIgnoreProperties(ignoreUnknown = true)
-public abstract class Error {
+public abstract class Error extends Model {
 
     @Value.Derived
+    @JsonProperty("owner")
     public String owner() {
         return "error";
     }
 
     @Value.Parameter
-    public abstract Type type();
+    @JsonProperty("type")
+    public abstract ErrorType type();
 
     @Value.Parameter
+    @JsonProperty("extra")
     public abstract Optional<String> extra();
 
-    public static Error create(Type type) {
+    public static Error create(ErrorType type) {
         return create(type, null);
     }
 
-    public static Error create(@Nonnull Type type, @Nullable String extra) {
+    public static Error create(@Nonnull ErrorType type, @Nullable String extra) {
         return ImmutableError.of(type, Optional.ofNullable(extra));
-    }
-
-    public enum Type {
-        UNKNOWN, UNAUTHORIZED, BAD_REQUEST, AUTHENTICATION,
-        EXPIRED, RATE_LIMIT, INADEQUATE_PERMISSIONS,
-        INVALID_VALUE, SERVER;
     }
 }

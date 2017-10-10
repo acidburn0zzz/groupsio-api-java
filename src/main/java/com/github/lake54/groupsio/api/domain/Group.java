@@ -1,5 +1,6 @@
 package com.github.lake54.groupsio.api.domain;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.github.lake54.groupsio.api.domain.enums.attachment.MaxAttachmentSize;
@@ -9,6 +10,7 @@ import com.github.lake54.groupsio.api.domain.enums.group.GroupAttachments;
 import com.github.lake54.groupsio.api.domain.enums.group.GroupMaxPhotoSize;
 import com.github.lake54.groupsio.api.domain.enums.group.GroupPrivacy;
 import com.github.lake54.groupsio.api.domain.enums.group.GroupReplyTo;
+import com.github.lake54.groupsio.api.domain.enums.group.GroupSubgroupAccess;
 import com.github.lake54.groupsio.api.domain.enums.group.GroupViewMembers;
 import com.github.lake54.groupsio.api.domain.enums.message.MessageSelection;
 import com.google.common.base.Preconditions;
@@ -24,111 +26,165 @@ import static org.immutables.value.Value.Style.ImplementationVisibility.PACKAGE;
 @JsonDeserialize(as = ImmutableGroup.class)
 public abstract class Group extends Model {
 
+    @JsonProperty("id")
     public abstract int id();
 
+    @JsonProperty("parent_group_id")
     public abstract Optional<Integer> parentGroupId();
 
+    @JsonProperty("created")
     public abstract String created();
 
+    @JsonProperty("updated")
     public abstract String updated();
 
+    @JsonProperty("title")
     public abstract String title();
 
+    @JsonProperty("name")
     public abstract String name();
 
+    @JsonProperty("alias")
     public abstract String alias();
 
+    @JsonProperty("desc")
     public abstract String desc();
 
+    @JsonProperty("subject_tag")
     public abstract String subjectTag();
 
+    @JsonProperty("footer")
     public abstract String footer();
 
+    @JsonProperty("website")
     public abstract String website();
 
+    @JsonProperty("announce")
     public abstract boolean announce();
 
+    @JsonProperty("moderated")
     public abstract boolean moderated();
 
+    @JsonProperty("new_users_moderated")
     public abstract boolean newUsersModerated();
 
+    @JsonProperty("unmoderate_users_after")
     public abstract int unmoderateUsersAfter();
 
+    @JsonProperty("restricted")
     public abstract boolean restricted();
 
+    @JsonProperty("allow_non_subs_to_post")
     public abstract boolean allowNonSubsToPost();
 
+    @JsonProperty("force_html_emails")
     public abstract boolean forceHtmlEmails();
 
+    @JsonProperty("normalize_html_emails")
     public abstract boolean normalizeHtmlEmails();
 
+    @JsonProperty("reply_to")
     public abstract GroupReplyTo replyTo();
 
+    @JsonProperty("remove_other_reply_options")
     public abstract boolean removeOtherReplyOptions();
 
+    @JsonProperty("privacy")
     public abstract GroupPrivacy privacy();
 
+    @JsonProperty("members_visible")
     public abstract GroupViewMembers membersVisible();
 
-    public abstract GroupAccess subgroupAccess();
+    @JsonProperty("subgroup_access")
+    public abstract GroupSubgroupAccess subgroupAccess();
 
+    @JsonProperty("calendar_access")
     public abstract GroupAccess calendarAccess();
 
+    @JsonProperty("files_access")
     public abstract GroupAccess filesAccess();
 
+    @JsonProperty("database_access")
     public abstract GroupAccess databaseAccess();
 
+    @JsonProperty("wiki_access")
     public abstract GroupAccess wikiAccess();
 
+    @JsonProperty("photos_access")
     public abstract GroupAccess photosAccess();
 
+    @JsonProperty("member_directory_access")
     public abstract GroupAccess memberDirectoryAccess();
 
-    public abstract GroupAccess pollsAccess();
+    // TODO: appears to be a bug with invalid enum of "polls_access_subscribers"
+    // @JsonProperty("polls_access")
+    // public abstract GroupAccess pollsAccess();
 
+    @JsonProperty("chat_access")
     public abstract GroupAccess chatAccess();
 
+    @JsonProperty("handle_attachments")
     public abstract GroupAttachments handleAttachments();
 
+    @JsonProperty("plain_text_only")
     public abstract boolean plainTextOnly();
 
+    @JsonProperty("max_photo_size_email")
     public abstract GroupMaxPhotoSize maxPhotoSizeEmail();
 
+    @JsonProperty("max_photo_size_photos")
     public abstract GroupMaxPhotoSize maxPhotoSizePhotos();
 
+    @JsonProperty("max_photo_size_databases")
     public abstract GroupMaxPhotoSize maxPhotoSizeDatabases();
 
+    @JsonProperty("max_photo_size_wiki_images")
     public abstract GroupMaxPhotoSize maxPhotoSizeWikiImages();
 
+    @JsonProperty("hash_tags_required")
     public abstract boolean hashTagsRequired();
 
+    @JsonProperty("restrict_create_hash_tags")
     public abstract boolean restrictCreateHashTags();
 
+    @JsonProperty("bounce_attachments")
     public abstract boolean bounceAttachments();
 
+    @JsonProperty("allow_photos_in_files")
     public abstract boolean allowPhotosInFiles();
 
+    @JsonProperty("email_delivery_default")
     public abstract EmailDelivery emailDeliveryDefault();
 
+    @JsonProperty("message_selection_default")
     public abstract MessageSelection messageSelectionDefault();
 
+    @JsonProperty("auto_follow_replies_default")
     public abstract boolean autoFollowRepliesDefault();
 
+    @JsonProperty("max_attachment_size_default")
     public abstract MaxAttachmentSize maxAttachmentSizeDefault();
 
+    @JsonProperty("disable_edits")
     public abstract boolean disableEdits();
 
+    @JsonProperty("disable_no_email")
     public abstract boolean disableNoEmail();
 
+    @JsonProperty("auto_close_threads")
     public abstract boolean autoCloseThreads();
 
+    @JsonProperty("close_threads_after")
     public abstract int closeThreadsAfter();
 
+    @JsonProperty("auto_moderate_threads")
     public abstract boolean autoModerateThreads();
 
+    @JsonProperty("moderate_threads_after")
     public abstract int moderateThreadsAfter();
 
     @Value.Default
+    @JsonProperty("object")
     public String object() {
         return "group";
     }
@@ -190,7 +246,7 @@ public abstract class Group extends Model {
 
         Builder membersVisible(GroupViewMembers membersVisible);
 
-        Builder subgroupAccess(GroupAccess subgroupAccess);
+        Builder subgroupAccess(GroupSubgroupAccess subgroupAccess);
 
         Builder calendarAccess(GroupAccess calendarAccess);
 
@@ -204,7 +260,8 @@ public abstract class Group extends Model {
 
         Builder memberDirectoryAccess(GroupAccess memberDirectoryAccess);
 
-        Builder pollsAccess(GroupAccess pollsAccess);
+        // TODO: appears to be a bug with invalid enum of "polls_access_subscribers"
+        // Builder pollsAccess(GroupAccess pollsAccess);
 
         Builder chatAccess(GroupAccess chatAccess);
 

@@ -1,9 +1,12 @@
-package com.github.lake54.groupsio.api.jackson;
+package com.github.lake54.groupsio.api.util;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.databind.type.TypeFactory;
+import com.fasterxml.jackson.datatype.guava.GuavaModule;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.github.lake54.groupsio.api.domain.Page;
 
 import java.util.function.Function;
@@ -11,7 +14,7 @@ import java.util.function.Function;
 /**
  * Utility class for interacting with Jackson types.
  */
-public class TypeUtils {
+public class JacksonUtils {
 
     /**
      * A reference to the default {@link TypeFactory} instance.
@@ -21,8 +24,7 @@ public class TypeUtils {
     /**
      * A static mapper instance to use for all JSON interaction.
      */
-    private static final ObjectMapper MAPPER = new ObjectMapper()
-        .setSerializationInclusion(JsonInclude.Include.NON_NULL);
+    private static final ObjectMapper MAPPER = createMapper();
 
     /**
      * Converts an object to the type defined by the provided generator.
@@ -36,6 +38,22 @@ public class TypeUtils {
      */
     public static <T> T convert(Object object, Function<TypeFactory, JavaType> generator) {
         return MAPPER.convertValue(object, generateType(generator));
+    }
+
+    /**
+     * Creates an {@link ObjectMapper} instance with configuration.
+     *
+     * @return
+     *      an {@link ObjectMapper} instance.
+     */
+    public static ObjectMapper createMapper() {
+        ObjectMapper mapper = new ObjectMapper();
+
+        mapper.registerModule(new GuavaModule());
+        mapper.registerModule(new Jdk8Module());
+        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+
+        return mapper;
     }
 
     /**

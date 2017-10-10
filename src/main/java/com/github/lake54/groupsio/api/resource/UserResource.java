@@ -4,9 +4,10 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.github.lake54.groupsio.api.GroupsIOApiClient;
 import com.github.lake54.groupsio.api.GroupsIOApiRequest;
 import com.github.lake54.groupsio.api.domain.Subscription;
+import com.github.lake54.groupsio.api.domain.SubscriptionPlus;
 import com.github.lake54.groupsio.api.domain.User;
 import com.github.lake54.groupsio.api.exception.GroupsIOApiException;
-import com.github.lake54.groupsio.api.jackson.TypeUtils;
+import com.github.lake54.groupsio.api.util.JacksonUtils;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -21,8 +22,8 @@ public class UserResource extends BaseResource {
     /**
      * A static reference to use when de-serializing pages of subscriptions.
      */
-    private static final JavaType SUBSCRIPTION_PAGE_TYPE = TypeUtils
-        .createPaginationType(Subscription.class);
+    private static final JavaType SUBSCRIPTION_PLUS_PAGE_TYPE = JacksonUtils
+        .createPaginationType(SubscriptionPlus.class);
 
     /**
      * Creates a new resource using a client instance.
@@ -89,7 +90,7 @@ public class UserResource extends BaseResource {
                 .putParam("limit", MAX_RESULTS)
             .build();
 
-        return this.apiClient.paginate(request, SUBSCRIPTION_PAGE_TYPE);
+        return this.apiClient.paginate(request, SUBSCRIPTION_PLUS_PAGE_TYPE);
     }
 
     /**

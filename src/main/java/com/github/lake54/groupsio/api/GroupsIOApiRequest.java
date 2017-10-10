@@ -76,7 +76,7 @@ public abstract class GroupsIOApiRequest {
      *      a new {@link Builder} instance.
      */
     public static Builder builder(@Nonnull String method, @Nonnull String path) {
-        return new Builder().method(method).path(path);
+        return new Builder().method(method).path(path.startsWith("/") ? path.substring(1) : path);
     }
 
     /**

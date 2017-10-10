@@ -1,5 +1,6 @@
 package com.github.lake54.groupsio.api.domain;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.base.Preconditions;
@@ -15,26 +16,33 @@ import static org.immutables.value.Value.Style.ImplementationVisibility.PACKAGE;
 @JsonDeserialize(as = ImmutablePage.class)
 public abstract class Page<T> extends Model {
 
+    @JsonProperty("total_count")
     public abstract int totalCount();
 
+    @JsonProperty("start_item")
     public abstract int startItem();
 
+    @JsonProperty("end_item")
     public abstract int endItem();
 
+    @JsonProperty("has_more")
     public abstract boolean hasMore();
 
+    @JsonProperty("next_page_token")
     public abstract int nextPageToken();
 
+    @JsonProperty("data")
     public abstract List<T> data();
 
     @Value.Default
+    @JsonProperty("object")
     public String object() {
-        return "page";
+        return "list";
     }
 
     @Value.Check
     void check() {
-        Preconditions.checkState(object().equals("page"));
+        Preconditions.checkState(object().equals("list"));
     }
 
     public static <T> Builder<T> builder() {

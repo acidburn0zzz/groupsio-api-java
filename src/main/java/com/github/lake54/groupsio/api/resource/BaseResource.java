@@ -3,7 +3,7 @@ package com.github.lake54.groupsio.api.resource;
 import com.github.lake54.groupsio.api.GroupsIOApiClient;
 import com.github.lake54.groupsio.api.GroupsIOApiRequest;
 import com.github.lake54.groupsio.api.exception.GroupsIOApiException;
-import com.github.lake54.groupsio.api.jackson.TypeUtils;
+import com.github.lake54.groupsio.api.util.JacksonUtils;
 import com.google.common.base.Preconditions;
 import okhttp3.FormBody;
 
@@ -55,7 +55,7 @@ abstract class BaseResource {
     <T> T update(String path, Class<T> tClass, T object) throws GroupsIOApiException, IOException {
         FormBody.Builder formBuilder = new FormBody.Builder();
 
-        Map<String, Object> data = TypeUtils.convert(object, factory ->
+        Map<String, Object> data = JacksonUtils.convert(object, factory ->
             factory.constructMapLikeType(Map.class, String.class, Object.class));
 
         for (Map.Entry<String, Object> entry : data.entrySet()) {

@@ -1,6 +1,5 @@
 package com.github.lake54.groupsio.api;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -8,11 +7,11 @@ import com.github.lake54.groupsio.api.domain.Error;
 import com.github.lake54.groupsio.api.domain.Login;
 import com.github.lake54.groupsio.api.domain.Page;
 import com.github.lake54.groupsio.api.exception.GroupsIOApiException;
-import com.github.lake54.groupsio.api.jackson.TypeUtils;
 import com.github.lake54.groupsio.api.resource.ArchiveResource;
 import com.github.lake54.groupsio.api.resource.GroupResource;
 import com.github.lake54.groupsio.api.resource.MemberResource;
 import com.github.lake54.groupsio.api.resource.UserResource;
+import com.github.lake54.groupsio.api.util.JacksonUtils;
 import com.google.common.base.Preconditions;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
@@ -23,7 +22,9 @@ import okhttp3.ResponseBody;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
@@ -62,8 +63,7 @@ public class GroupsIOApiClient {
     /**
      * A mapper instance to use for all JSON interactions.
      */
-    private static final ObjectMapper MAPPER = new ObjectMapper()
-        .setSerializationInclusion(JsonInclude.Include.NON_NULL);
+    private static final ObjectMapper MAPPER = JacksonUtils.createMapper();
 
     /**
      * The API key use for authorization.
@@ -84,21 +84,21 @@ public class GroupsIOApiClient {
      * Common client initialisation. Provide your API key and email.
      * 
      * @param apiKey
-     *            - TODO: Update with details once published.
+     *      TODO: Update with details once published.
      */
     public GroupsIOApiClient(@Nonnull String apiKey) {
-        this(DEFAULT_HOSTNAME, DEFAULT_VERSION, apiKey);
+        this(apiKey, DEFAULT_HOSTNAME, DEFAULT_VERSION);
     }
     
     /**
      * More in-depth constructor to override the defaults.
      *
      * @param apiKey
-     *            - TODO: Update with details once published.
+     *      TODO: Update with details once published.
      * @param hostname
-     *            - the base hostname (e.g. api.groups.io) to use
+     *      the base hostname (e.g. api.groups.io) to use.
      * @param version
-     *            - the API version (e.g. v1) to use
+     *      the API version (e.g. v1) to use.
      */
     public GroupsIOApiClient(@Nonnull String apiKey, @Nonnull String hostname, @Nonnull String version) {
         Preconditions.checkNotNull(version);
@@ -168,7 +168,7 @@ public class GroupsIOApiClient {
      */
     @Nonnull
     public <T> T call(GroupsIOApiRequest request, Class<T> type) throws GroupsIOApiException, IOException {
-        return call(request, TypeUtils.generateType(typeFactory -> typeFactory.constructType(type)));
+        return call(request, JacksonUtils.generateType(typeFactory -> typeFactory.constructType(type)));
     }
 
     /**
@@ -188,7 +188,7 @@ public class GroupsIOApiClient {
      */
     @Nonnull
     public <T> T call(GroupsIOApiRequest request, TypeReference<T> type) throws GroupsIOApiException, IOException {
-        return call(request, TypeUtils.generateType(typeFactory -> typeFactory.constructType(type)));
+        return call(request, JacksonUtils.generateType(typeFactory -> typeFactory.constructType(type)));
     }
 
     /**
@@ -228,7 +228,7 @@ public class GroupsIOApiClient {
         }
 
         if (!request.headers().containsKey("Authorization")) {
-            requestBuilder.header("Authorization", "Basic " + this.apiToken + ":");
+            requestBuilder.header("Authorization", "Basic " + encodeBase64(this.apiToken + ":"));
         }
 
         Response response = CLIENT
@@ -238,15 +238,18 @@ public class GroupsIOApiClient {
         ResponseBody responseBody = response.body();
         Preconditions.checkNotNull(responseBody);
 
-        byte[] bodyBytes = responseBody.bytes();
-        if (response.code() != 200) {
-            throw createErrorException(bodyBytes);
-        }
+//        byte[] bodyBytes = responseBody.bytes();
+//
+//        if (response.code() != 200) {
+//            throw createErrorException(bodyBytes);
+//        }
+
+        String bodyBytes = responseBody.string();
 
         try {
             return MAPPER.readValue(bodyBytes, type);
         } catch (IOException e) {
-            throw createErrorException(bodyBytes);
+            throw createErrorException(bodyBytes.getBytes());
         }
     }
 
@@ -317,7 +320,7 @@ public class GroupsIOApiClient {
             .builder("GET", "/login")
                 .putParam("email", email)
                 .putParam("password", password)
-                .putHeaders("Authorization", "Basic " + this.apiKey + ":");
+                .putHeaders("Authorization", "Basic " + encodeBase64(this.apiKey + ":"));
 
         if (tfa != null) {
             requestBuilder.putParam("twofactor", "" + tfa);
@@ -344,7 +347,7 @@ public class GroupsIOApiClient {
      */
     @Nonnull
     public <T> List<T> paginate(GroupsIOApiRequest request, Class<T> type) throws GroupsIOApiException, IOException {
-        return paginate(request, TypeUtils.generateType(typeFactory -> typeFactory.constructType(type)));
+        return paginate(request, JacksonUtils.generateType(typeFactory -> typeFactory.constructType(type)));
     }
 
     /**
@@ -364,7 +367,7 @@ public class GroupsIOApiClient {
      */
     @Nonnull
     public <T> List<T> paginate(GroupsIOApiRequest request, TypeReference<T> type) throws GroupsIOApiException, IOException {
-        return paginate(request, TypeUtils.generateType(typeFactory -> typeFactory.constructType(type)));
+        return paginate(request, JacksonUtils.generateType(typeFactory -> typeFactory.constructType(type)));
     }
 
     /**
@@ -413,5 +416,9 @@ public class GroupsIOApiClient {
      */
     private GroupsIOApiException createErrorException(byte[] bytes) throws IOException {
         return new GroupsIOApiException(MAPPER.readValue(bytes, Error.class));
+    }
+
+    private static String encodeBase64(String value) {
+        return Base64.getEncoder().encodeToString(value.getBytes(StandardCharsets.UTF_8));
     }
 }

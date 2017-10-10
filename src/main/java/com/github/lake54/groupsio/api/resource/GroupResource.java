@@ -7,13 +7,13 @@ import com.github.lake54.groupsio.api.domain.Group;
 import com.github.lake54.groupsio.api.domain.Permissions;
 import com.github.lake54.groupsio.api.domain.enums.group.GroupPrivacy;
 import com.github.lake54.groupsio.api.exception.GroupsIOApiException;
-import com.github.lake54.groupsio.api.jackson.TypeUtils;
+import com.github.lake54.groupsio.api.util.JacksonUtils;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.List;
 
-import static com.github.lake54.groupsio.api.domain.Error.Type.INADEQUATE_PERMISSIONS;
+import static com.github.lake54.groupsio.api.domain.enums.error.ErrorType.inadequate_permissions;
 
 /**
  * Resource class based around all operations related to groups.
@@ -23,7 +23,7 @@ public class GroupResource extends BaseResource {
     /**
      * A static reference to use when de-serializing pages of groups.
      */
-    private static final JavaType GROUP_PAGE_TYPE = TypeUtils
+    private static final JavaType GROUP_PAGE_TYPE = JacksonUtils
         .createPaginationType(Group.class);
 
     /**
@@ -81,7 +81,7 @@ public class GroupResource extends BaseResource {
      */
     public void deleteGroup(int groupId) throws GroupsIOApiException, IOException {
         if (!getPermissions(groupId).deleteGroup()) {
-            throw new GroupsIOApiException(INADEQUATE_PERMISSIONS);
+            throw new GroupsIOApiException(inadequate_permissions);
         }
 
         GroupsIOApiRequest request = GroupsIOApiRequest
@@ -105,7 +105,7 @@ public class GroupResource extends BaseResource {
      */
     public Group getGroup(int groupId) throws GroupsIOApiException, IOException {
         if (!getPermissions(groupId).manageGroupSettings()) {
-            throw new GroupsIOApiException(INADEQUATE_PERMISSIONS);
+            throw new GroupsIOApiException(inadequate_permissions);
         }
 
         GroupsIOApiRequest request = GroupsIOApiRequest
@@ -182,7 +182,7 @@ public class GroupResource extends BaseResource {
      */
     public Group updateGroup(Group group) throws IOException, GroupsIOApiException {
         if (!getPermissions(group.id()).manageGroupSettings()) {
-            throw new GroupsIOApiException(INADEQUATE_PERMISSIONS);
+            throw new GroupsIOApiException(inadequate_permissions);
         }
         return this.update("/updategroup", Group.class, group);
     }

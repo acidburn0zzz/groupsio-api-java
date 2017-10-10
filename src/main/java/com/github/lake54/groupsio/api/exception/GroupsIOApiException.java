@@ -1,6 +1,7 @@
 package com.github.lake54.groupsio.api.exception;
 
 import com.github.lake54.groupsio.api.domain.Error;
+import com.github.lake54.groupsio.api.domain.enums.error.ErrorType;
 
 /**
  * Exception class to be thrown during errors encountered
@@ -24,7 +25,7 @@ public class GroupsIOApiException extends Exception {
      * @param errorType
      *      the error type to create from.
      */
-    public GroupsIOApiException(Error.Type errorType) {
+    public GroupsIOApiException(ErrorType errorType) {
         this(errorType.toString());
     }
 

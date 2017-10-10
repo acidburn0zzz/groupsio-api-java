@@ -8,13 +8,13 @@ import com.github.lake54.groupsio.api.domain.results.BulkRemoveResults;
 import com.github.lake54.groupsio.api.domain.results.DirectAddResults;
 import com.github.lake54.groupsio.api.domain.results.InviteResults;
 import com.github.lake54.groupsio.api.exception.GroupsIOApiException;
-import com.github.lake54.groupsio.api.jackson.TypeUtils;
+import com.github.lake54.groupsio.api.util.JacksonUtils;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.List;
 
-import static com.github.lake54.groupsio.api.domain.Error.Type.INADEQUATE_PERMISSIONS;
+import static com.github.lake54.groupsio.api.domain.enums.error.ErrorType.inadequate_permissions;
 
 /**
  * Resource class based around all operations related to group members.
@@ -24,7 +24,7 @@ public class MemberResource extends BaseResource {
     /**
      * A static reference to use when de-serializing pages of subscriptions.
      */
-    private static final JavaType SUBSCRIPTION_PAGE_TYPE = TypeUtils
+    private static final JavaType SUBSCRIPTION_PAGE_TYPE = JacksonUtils
         .createPaginationType(Subscription.class);
 
     /**
@@ -53,7 +53,7 @@ public class MemberResource extends BaseResource {
      */
     public Subscription approveMember(int groupId, int subscriptionId) throws GroupsIOApiException, IOException {
         if (!this.apiClient.group().getPermissions(groupId).managePendingMembers()) {
-            throw new GroupsIOApiException(INADEQUATE_PERMISSIONS);
+            throw new GroupsIOApiException(inadequate_permissions);
         }
 
         GroupsIOApiRequest request = GroupsIOApiRequest
@@ -82,7 +82,7 @@ public class MemberResource extends BaseResource {
     public Subscription banMember(int groupId, int subscriptionId) throws GroupsIOApiException, IOException {
         if (!this.apiClient.group().getPermissions(groupId).banMembers()
             || !getMemberInGroup(groupId, subscriptionId).status().canBan()) {
-            throw new GroupsIOApiException(INADEQUATE_PERMISSIONS);
+            throw new GroupsIOApiException(inadequate_permissions);
         }
 
         GroupsIOApiRequest request = GroupsIOApiRequest
@@ -110,7 +110,7 @@ public class MemberResource extends BaseResource {
      */
     public BulkRemoveResults bulkRemoveMembers(int groupId, List<String> emails) throws GroupsIOApiException, IOException {
         if (this.apiClient.group().getPermissions(groupId).inviteMembers()) {
-            throw new GroupsIOApiException(INADEQUATE_PERMISSIONS);
+            throw new GroupsIOApiException(inadequate_permissions);
         }
 
         GroupsIOApiRequest request = GroupsIOApiRequest
@@ -138,7 +138,7 @@ public class MemberResource extends BaseResource {
      */
     public DirectAddResults directAddMember(int groupId, List<String> emails) throws GroupsIOApiException, IOException {
         if (!this.apiClient.group().getPermissions(groupId).inviteMembers()) {
-            throw new GroupsIOApiException(INADEQUATE_PERMISSIONS);
+            throw new GroupsIOApiException(inadequate_permissions);
         }
 
         GroupsIOApiRequest request = GroupsIOApiRequest
@@ -166,7 +166,7 @@ public class MemberResource extends BaseResource {
      */
     public Subscription getMemberInGroup(int groupId, int subscriptionId) throws GroupsIOApiException, IOException {
         if (!this.apiClient.group().getPermissions(groupId).viewMembers()) {
-            throw new GroupsIOApiException(INADEQUATE_PERMISSIONS);
+            throw new GroupsIOApiException(inadequate_permissions);
         }
 
         GroupsIOApiRequest request = GroupsIOApiRequest
@@ -192,7 +192,7 @@ public class MemberResource extends BaseResource {
      */
     public List<Subscription> getMembersInGroup(int groupId) throws GroupsIOApiException, IOException {
         if (!this.apiClient.group().getPermissions(groupId).viewMembers()) {
-            throw new GroupsIOApiException(INADEQUATE_PERMISSIONS);
+            throw new GroupsIOApiException(inadequate_permissions);
         }
 
         GroupsIOApiRequest request = GroupsIOApiRequest
@@ -220,7 +220,7 @@ public class MemberResource extends BaseResource {
      */
     public InviteResults inviteMember(int groupId, List<String> emails) throws GroupsIOApiException, IOException {
         if (!this.apiClient.group().getPermissions(groupId).inviteMembers()) {
-            throw new GroupsIOApiException(INADEQUATE_PERMISSIONS);
+            throw new GroupsIOApiException(inadequate_permissions);
         }
 
         GroupsIOApiRequest request = GroupsIOApiRequest
@@ -248,7 +248,7 @@ public class MemberResource extends BaseResource {
      */
     public Subscription removeMember(int groupId, int subscriptionId) throws GroupsIOApiException, IOException {
         if (!this.apiClient.group().getPermissions(groupId).removeMembers()) {
-            throw new GroupsIOApiException(INADEQUATE_PERMISSIONS);
+            throw new GroupsIOApiException(inadequate_permissions);
         }
 
         GroupsIOApiRequest request = GroupsIOApiRequest
@@ -276,7 +276,7 @@ public class MemberResource extends BaseResource {
      */
     public List<Subscription> searchMembers(int groupId, String query) throws GroupsIOApiException, IOException {
         if (!this.apiClient.group().getPermissions(groupId).viewMembers()) {
-            throw new GroupsIOApiException(INADEQUATE_PERMISSIONS);
+            throw new GroupsIOApiException(inadequate_permissions);
         }
 
         GroupsIOApiRequest request = GroupsIOApiRequest
@@ -306,7 +306,7 @@ public class MemberResource extends BaseResource {
     public Subscription sendBounceProbe(int groupId, int subscriptionId) throws GroupsIOApiException, IOException {
         if (!this.apiClient.group().getPermissions(groupId).manageMemberSubscriptionOptions()
                 || !getMemberInGroup(groupId, subscriptionId).userStatus().canSendBounceProbe()) {
-            throw new GroupsIOApiException(INADEQUATE_PERMISSIONS);
+            throw new GroupsIOApiException(inadequate_permissions);
         }
 
         GroupsIOApiRequest request = GroupsIOApiRequest
@@ -335,7 +335,7 @@ public class MemberResource extends BaseResource {
     public Subscription sendConfirmationEmail(int groupId, int subscriptionId) throws GroupsIOApiException, IOException {
         if (!this.apiClient.group().getPermissions(groupId).manageMemberSubscriptionOptions()
                 || !getMemberInGroup(groupId, subscriptionId).userStatus().canSendConfirmationEmail()) {
-            throw new GroupsIOApiException(INADEQUATE_PERMISSIONS);
+            throw new GroupsIOApiException(inadequate_permissions);
         }
 
         GroupsIOApiRequest request = GroupsIOApiRequest
@@ -372,7 +372,7 @@ public class MemberResource extends BaseResource {
      */
     public Subscription updateMember(Subscription subscription) throws GroupsIOApiException, IOException {
         if (!this.apiClient.group().getPermissions(subscription.groupId()).manageMemberSubscriptionOptions()) {
-            throw new GroupsIOApiException(INADEQUATE_PERMISSIONS);
+            throw new GroupsIOApiException(inadequate_permissions);
         }
         return this.update("/updatemember", Subscription.class, subscription);
     }
